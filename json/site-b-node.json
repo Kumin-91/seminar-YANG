@@ -1,0 +1,28 @@
+{
+  "hybrid-cloud:cluster": {
+    "node": [
+      {
+        "name": "Site-B-Worker-Node",
+        "role-assignment": [
+          {
+            "role": "agent",
+            "priority": "secondary"
+          }
+        ],
+        "compute": {
+          "vcpu": 2,
+          "memory": 4,
+          "burstable": false
+        },
+        "network": {
+          "tailscale-ip": "100.100.1.253",
+          "zone": "on-prem"
+        },
+        "storage": {
+          "type": "mount-only",
+          "cache-size": 20
+        }
+      }
+    ]
+  }
+}

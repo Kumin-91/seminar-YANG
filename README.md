@@ -65,13 +65,13 @@
 #### 6. Tree Schema Visualization
 
 ```bash
-pyang -p models -f tree models/hybrid-cloud.yang
+yanglint -f tree ./models/hybrid-cloud.yang  
 ```
 
 ```plain text
 module: hybrid-cloud
-+--rw cluster
-    +--rw node* [name]
+  +--rw cluster
+     +--rw node* [name]
         +--rw name               string
         +--rw role-assignment* [role]
         |  +--rw role        ct:k3s-role
@@ -84,21 +84,62 @@ module: hybrid-cloud
         |  +--rw tailscale-ip    inet:ipv4-address
         |  +--rw zone?           enumeration
         +--rw storage
-        +--rw type?         enumeration
-        +--rw cache-size?   uint32
+           +--rw type?         enumeration
+           +--rw cache-size?   uint32
 ```
 
 ---
 
 ### Phase 2. JSON Schema Generation & Validation
 
+#### 0. Configure YANG Tools
+
+macOS 환경이 아닌, Rocky Linux 9.x 환경에서 진행하였습니다.
+
+```bash
+# libyang 설치
+sudo dnf install libyang
+
+# yanglint 설치 확인
+yanglint --version
+# yanglint 2.0.7
+```
+
 #### 1. JSON Schema Generation
 
+**[Phase 0. Physical Inventory](#phase-0-physical-inventory)** 에서 정의한 리소스 사양에 따라, 각 노드에 대한 JSON 데이터를 작성하였습니다.
 
+* **[AWS Node Example](./json/aws-node.json)**
+
+* **[Site A Node Example](./json/site-a-node.json)**
+
+* **[Site B Node Example](./json/site-b-node.json)**
 
 #### 2. JSON Schema Validation
 
+```bash
+yanglint -p models -t data models/hybrid-cloud.yang json/aws-node.json
+yanglint -p models -t data models/hybrid-cloud.yang json/site-a-node.json
+yanglint -p models -t data models/hybrid-cloud.yang json/site-b-node.json
+```
 
+#### 3. JSON Schema Validation Error Examples
+
+JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시지를 제공하여 문제를 쉽게 파악할 수 있습니다.
+
+* Tailscale IP 주소가 패턴에 맞지 않는 경우
+
+    ```plain text
+    libyang err : Unsatisfied pattern - "100.10.1.201" does not conform to "100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)". (Schema location /hybrid-cloud:cluster/node/network/tailscale-ip, data location /hybrid-cloud:network, line number 22.)
+    YANGLINT[E]: Failed to parse input data file "json/aws-node.json".
+    ```
+
+* 필드의 값이 허용된 범위를 벗어난 경우
+
+    ```plain text
+    libyang err : Unsatisfied range - value "16" is out of the allowed range. (Schema location /hybrid-cloud:cluster/node/compute/vcpu, data location /hybrid-cloud:compute, line number 13.)
+    YANGLINT[E]: Failed to parse input data file "json/site-b-node.json".
+    ```
 
 ---
 
