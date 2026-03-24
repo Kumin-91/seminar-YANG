@@ -1,0 +1,37 @@
+module res-network {
+    yang-version 1.1;
+    namespace "urn:csmin:params:xml:ns:yang:res-network";
+    prefix rn;
+
+    import ietf-inet-types {
+        prefix inet;
+    }
+
+    grouping resource-network {
+        container network {
+            description "논리적 네트워크 자원 정의 그룹입니다.";
+
+            leaf tailscale-ip {
+                type inet:ipv4-address {
+                    pattern '100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.'
+                          + '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
+                          + '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)';
+                }
+                mandatory true;
+                description "Tailscale 네트워크에서 할당된 IP 주소입니다. (100.64.0.0/10)";
+            }
+
+            leaf zone {
+                type enumeration {
+                    enum cloud {
+                        description "클라우드 네트워크 영역 (예: AWS, Azure)";
+                    }
+
+                    enum on-prem {
+                        description "온프레미스 네트워크 영역 (예: Site-A, Site-B)";
+                    }
+                }
+            }
+        }
+    }
+}

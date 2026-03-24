@@ -1,0 +1,26 @@
+module res-storage {
+    yang-version 1.1;
+    namespace "urn:csmin:params:xml:ns:yang:res-storage";
+    prefix rs;
+
+    grouping resource-storage {
+        container storage {
+            leaf type {
+                type enumeration {
+                    enum s3-backed {
+                        description "JuiceFS의 메인 스토리지가 되는 노드입니다.";
+                    }
+
+                    enum mount-only {
+                        description "JuiceFS의 메인 스토리지 노드에 마운트만 하는 보조 노드입니다.";
+                    }
+                }
+            }
+            leaf cache-size {
+                type uint32;
+                units "GB";
+                description "로컬 NVMe/SSD 캐시 할당량 (GB 단위)";
+            }
+        }
+    }
+}

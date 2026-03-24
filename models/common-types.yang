@@ -1,0 +1,20 @@
+module common-types {
+    yang-version 1.1;
+    namespace "urn:csmin:params:xml:ns:yang:common-types";
+    prefix ct;
+
+    typedef k3s-role {
+        type enumeration {
+            enum server;
+            enum agent;
+        }
+    }
+
+    typedef node-role {
+        type enumeration {
+            enum primary;
+            enum secondary;
+            enum fallback;
+        }
+    }
+}

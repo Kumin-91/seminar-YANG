@@ -1,0 +1,32 @@
+module res-compute {
+    yang-version 1.1;
+    namespace "urn:csmin:params:xml:ns:yang:res-compute";
+    prefix rc;
+
+    grouping resource-compute {
+        container compute {
+            description "논리적 연산 자원 정의 그룹입니다.";
+
+            leaf vcpu {
+                type uint8 {
+                    range "1..12";
+                }
+                description "가상 CPU 코어 수 (1~12)";
+            }
+
+            leaf memory {
+                type uint8 {
+                    range "1..16";
+                }
+                units "GB";
+                description "할당된 메모리 용량 (GB 단위, 1~16)";
+            }
+
+            leaf burstable {
+                type boolean;
+                default "false";
+                description "버스티블 인스턴스 여부 (true: 버스티블, false: 일반)";
+            }
+        }
+    }
+}

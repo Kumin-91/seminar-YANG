@@ -4,11 +4,23 @@
 
 ### Phase 0. Physical Inventory
 
+#### 1. Resource Role Assignment
+
 | Location | Access Point | Storage Node | Control Plane | Worker Node |
 | --- | --- | --- | --- | --- |
 | **AWS** | Primary | ❌ | Primary | Fallback |
 | **Site A** | Secondary | Primary | Secondary | Primary |
 | **Site B** | ❌ | ❌ | ❌ | Secondary |
+
+#### 2. Resource Specification
+
+| Location | Network | Compute | Burstable | Storage | Cache Quota |
+| --- | --- | --- | --- | --- | --- |
+| AWS | 100.100.1.AWS | 2 vCPU / 4GB RAM (t3.medium) | Yes | 20GB (Root EBS) & JuiceFS Mount | 5GB EBS |
+| Site A | 100.100.1.AAA | 4 vCPU / 8GB RAM (Mid-Range CPU) | Yes (Up to 8 vCPU / 16GB RAM) | S3 Backend & 1TB ZFS Pool | 100GB NVME |
+| Site B | 100.100.1.BBB | 2 vCPU / 4GB RAM (Low-Power CPU) | No | JuiceFS Mount Only | 20GB SSD |
+
+#### 3. Thoughts on Network Latency
 
 * Site A, Site B 서버는 서로 다른 네트워크에 위치해 있지만, 물리적으로 가까운 위치에 있으며 동일한 네트워크 도메인 내에 위치해 있습니다.
 
@@ -16,57 +28,81 @@
 
     * 매우 낮은 Latency를 가지고 있어 JuiceFS / K3s 클러스터 구축에 적합합니다.
 
-#### 1. AWS
-
-* **Network:** 100.100.1.AWS
-
-* **Compute:** 2 vCPU / 4GB RAM (t3.medium)
-
-* **Burstable:** Yes
-
-* **Storage:** 20GB (Root EBS) / JuiceFS Mount
-
-* **Cache Quota:** 5GB (Root EBS)
-
-#### 2. Site A
-
-* **Network:** 100.100.1.AAA
-
-* **Compute:** 4 vCPU / 8GB RAM (Mid-Range CPU)
-
-* **Burstable:** Yes (Up to 8 vCPU / 16GB RAM)
-
-* **Storage:** S3 Backend (Or Self-Hosted S3 Compatible) + 1TB ZFS Pool
-
-* **Cache Quota:** 100GB NVME
-
-#### 3. Site B
-
-* **Network:** 100.100.1.BBB
-
-* **Compute:** 2 vCPU / 4GB RAM (Low-Power CPU)
-
-* **Burstable:** No
-
-* **Storage:** N/A (JuiceFS Mount Only)
-
-* **Cache Quota:** 20GB SSD
+---
 
 ### Phase 1. YANG Modeling
 
-#### 1. Node Inventory
+#### 1. Common Types: [common-types.yang](models/common-types.yang)
+
+* K3s 노드 역할과 우선순위를 정의하는 공통 유형 모듈입니다.
+
+#### 2. Resource Compute: [resource-compute.yang](models/resource-compute.yang)
+
+* vCPU, Memory, Burstable 여부 등 컴퓨팅 자원 관련 속성을 정의하는 모듈입니다.
+
+* 엄격한 검증을 적용하여 각 노드의 컴퓨팅 자원 사양이 허용된 범위 내에 있도록 합니다.
+
+#### 3. Resource Network: [resource-network.yang](models/resource-network.yang)
+
+* 엄격하게 Tailscale IP 주소만 허용하도록 구성이 된 네트워크 자원 모델입니다.
+
+* Cloud / On-Prem 자원을 구분할 수 있도록 구성되어 있습니다.
+
+    * AWS: zone "cloud"
+
+    * Site A, Site B: zone "on-prem"
+
+#### 4. Resource Storage: [resource-storage.yang](models/resource-storage.yang)
+
+* JuiceFS의 메인 스토리지 노드와 마운트 전용 보조 노드를 구분하는 스토리지 자원 모델입니다.
+
+* 캐시 할당량을 GB 단위로 명확히 정의하여, 각 노드의 스토리지 자원 사양이 허용된 범위 내에 있도록 합니다.
+
+#### 5. Hybrid Cloud: [hybrid-cloud.yang](models/hybrid-cloud.yang)
+
+* 클러스터 전체를 포괄하는 최상위 모델로, 각 노드의 역할과 자원 사양을 통합적으로 표현합니다.
+
+#### 6. Tree Schema Visualization
+
+```bash
+pyang -p models -f tree models/hybrid-cloud.yang
+```
+
+```plain text
+module: hybrid-cloud
++--rw cluster
+    +--rw node* [name]
+        +--rw name               string
+        +--rw role-assignment* [role]
+        |  +--rw role        ct:k3s-role
+        |  +--rw priority    ct:node-role
+        +--rw compute
+        |  +--rw vcpu?        uint8
+        |  +--rw memory?      uint8
+        |  +--rw burstable?   boolean
+        +--rw network
+        |  +--rw tailscale-ip    inet:ipv4-address
+        |  +--rw zone?           enumeration
+        +--rw storage
+        +--rw type?         enumeration
+        +--rw cache-size?   uint32
+```
+
+---
+
+### Phase 2. JSON Schema Generation & Validation
+
+#### 1. JSON Schema Generation
 
 
 
-#### 2. Network Topology
+#### 2. JSON Schema Validation
 
 
 
-#### 3. Storage Topology
+---
 
-
-
-### Phase 2. Virtual Network (Tailscale) & Virtual Storage (JuiceFS)
+### Phase 3. Virtual Network (Tailscale) & Virtual Storage (JuiceFS)
 
 #### 1. Tailscale
 
@@ -78,8 +114,8 @@
 
 > **TBD**
 
-### Phase 3. K3s Cluster Deployment
+---
 
-## 🪧 Seminar Outline
+### Phase 4. K3s Cluster Deployment
 
 > **TBD**
