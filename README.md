@@ -1,10 +1,27 @@
 # One Logical Infrastructure, Many Physical Realities: A YANG-Driven Hybrid Cloud with K3s
 
-## 🗿 Milestone
+[Phase 0. Physical Inventory & Resource Specification](#phase-0-physical-inventory)
 
-### Phase 0. Physical Inventory
+[Phase 1. Logical Abstraction via YANG Modeling](#phase-1-logical-abstraction-via-yang-modeling)
 
-#### 1. Resource Role Assignment
+[Phase 2. Data Integrity & Schema Validation](#phase-2-data-integrity--schema-validation)
+
+[Phase 3. Overlay Networking & Distributed Storage](#phase-3-overlay-networking--distributed-storage)
+
+[Phase 4. Provisioning Automation via Ansible](#phase-4-provisioning-automation-via-ansible)
+
+[Phase 5. Hybrid Cluster Orchestration & Realization](#phase-5-hybrid-cluster-orchestration--realization)
+
+## Working in Progress
+
+> [Phase 3. Overlay Networking & Distributed Storage](#phase-3-overlay-networking--distributed-storage)
+>> [Works 1. Node Realization: Instance Provisioning](#works-1-node-realization-instance-provisioning)  
+>> [Works 2. Overlay Connectivity: Tailscale Mesh Integration](#works-2-overlay-connectivity-tailscale-mesh-integration)  
+>> [Works 3. Storage Abstraction: JuiceFS Infrastructure Setup](#works-3-storage-abstraction-juicefs-infrastructure-setup)  
+
+## Phase 0. Physical Inventory & Resource Specification
+
+### Works 1. Strategic Role Allocation & Infrastructure Hierarchy
 
 | Location | Access Point | Storage Node | Control Plane | Worker Node |
 | --- | --- | --- | --- | --- |
@@ -12,7 +29,7 @@
 | **Site A** | Secondary | Primary | Secondary | Primary |
 | **Site B** | ❌ | ❌ | ❌ | Secondary |
 
-#### 2. Resource Specification
+### Works 2. Hardware Inventory & Compute/Storage Quotas
 
 | Location | Network | Compute | Burstable | Storage | Cache Quota |
 | --- | --- | --- | --- | --- | --- |
@@ -20,7 +37,7 @@
 | Site A | 100.100.1.AAA | 4 vCPU / 8GB RAM (Mid-Range CPU) | Yes (Up to 8 vCPU / 16GB RAM) | S3 Backend & 1TB ZFS Pool | 100GB NVME |
 | Site B | 100.100.1.BBB | 2 vCPU / 4GB RAM (Low-Power CPU) | No | JuiceFS Mount Only | 20GB SSD |
 
-#### 3. Thoughts on Network Latency
+### Works 3. Network Topology & Latency Analysis
 
 * Site A, Site B 서버는 서로 다른 네트워크에 위치해 있지만, 물리적으로 가까운 위치에 있으며 동일한 네트워크 도메인 내에 위치해 있습니다.
 
@@ -30,19 +47,19 @@
 
 ---
 
-### Phase 1. YANG Modeling
+## Phase 1. Logical Abstraction via YANG Modeling
 
-#### 1. Common Types: [common-types.yang](models/common-types.yang)
+### Works 1. Base Type Definitions: [common-types.yang](models/common-types.yang)
 
 * K3s 노드 역할과 우선순위를 정의하는 공통 유형 모듈입니다.
 
-#### 2. Resource Compute: [resource-compute.yang](models/resource-compute.yang)
+### Works 2. Compute Resource Abstraction: [resource-compute.yang](models/resource-compute.yang)
 
 * vCPU, Memory, Burstable 여부 등 컴퓨팅 자원 관련 속성을 정의하는 모듈입니다.
 
 * 엄격한 검증을 적용하여 각 노드의 컴퓨팅 자원 사양이 허용된 범위 내에 있도록 합니다.
 
-#### 3. Resource Network: [resource-network.yang](models/resource-network.yang)
+### Works 3. Network Perimeter & Policy Modeling: [resource-network.yang](models/resource-network.yang)
 
 * 엄격하게 Tailscale IP 주소만 허용하도록 구성이 된 네트워크 자원 모델입니다.
 
@@ -52,17 +69,32 @@
 
     * Site A, Site B: zone "on-prem"
 
-#### 4. Resource Storage: [resource-storage.yang](models/resource-storage.yang)
+### Works 4. Distributed Storage Logic Modeling: [resource-storage.yang](models/resource-storage.yang)
 
 * JuiceFS의 메인 스토리지 노드와 마운트 전용 보조 노드를 구분하는 스토리지 자원 모델입니다.
 
 * 캐시 할당량을 GB 단위로 명확히 정의하여, 각 노드의 스토리지 자원 사양이 허용된 범위 내에 있도록 합니다.
 
-#### 5. Hybrid Cloud: [hybrid-cloud.yang](models/hybrid-cloud.yang)
+### Works 5. Holistic Cluster Integration: [hybrid-cloud.yang](models/hybrid-cloud.yang)
 
 * 클러스터 전체를 포괄하는 최상위 모델로, 각 노드의 역할과 자원 사양을 통합적으로 표현합니다.
 
-#### 6. Tree Schema Visualization
+---
+
+## Phase 2. Data Integrity & Schema Validation
+
+### Works 0. Environment Setup: libyang & yanglint (Rocky Linux 9)
+
+```bash
+# libyang 설치
+sudo dnf install libyang
+
+# yanglint 설치 확인
+yanglint --version
+# yanglint 2.0.7
+```
+
+### Works 1. Hierarchical Schema Visualization & Structural Audit
 
 ```bash
 yanglint -f tree ./models/hybrid-cloud.yang  
@@ -88,24 +120,7 @@ module: hybrid-cloud
            +--rw cache-size?   uint32
 ```
 
----
-
-### Phase 2. JSON Schema Generation & Validation
-
-#### 0. Configure YANG Tools
-
-macOS 환경이 아닌, Rocky Linux 9.x 환경에서 진행하였습니다.
-
-```bash
-# libyang 설치
-sudo dnf install libyang
-
-# yanglint 설치 확인
-yanglint --version
-# yanglint 2.0.7
-```
-
-#### 1. JSON Schema Generation
+### Works 2. Data Instance Modeling: Node-specific JSON Manifests
 
 **[Phase 0. Physical Inventory](#phase-0-physical-inventory)** 에서 정의한 리소스 사양에 따라, 각 노드에 대한 JSON 데이터를 작성하였습니다.
 
@@ -115,7 +130,7 @@ yanglint --version
 
 * **[Site B Node Example](./json/site-b-node.json)**
 
-#### 2. JSON Schema Validation
+### Works 3. Schema Compliance Verification & Data Integrity Audit
 
 ```bash
 yanglint -p models -t data models/hybrid-cloud.yang json/aws-node.json
@@ -123,7 +138,7 @@ yanglint -p models -t data models/hybrid-cloud.yang json/site-a-node.json
 yanglint -p models -t data models/hybrid-cloud.yang json/site-b-node.json
 ```
 
-#### 3. JSON Schema Validation Error Examples
+### Works 4. Exception Handling & Constraint Enforcement Scenarios
 
 JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시지를 제공하여 문제를 쉽게 파악할 수 있습니다.
 
@@ -143,20 +158,26 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ---
 
-### Phase 3. Virtual Network (Tailscale) & Virtual Storage (JuiceFS)
+## Phase 3. Overlay Networking & Distributed Storage
 
-#### 1. Tailscale
+### Works 1. Node Realization: Instance Provisioning
 
-* AWS와 Site A는 같은 Tailnet 네트워크에 연결되어 있음
+### Works 2. Overlay Connectivity: Tailscale Mesh Integration
 
-* Site B는 별도의 Tailnet 네트워크에 속해 있으며, Shared-In 기능을 통해 같은 Tailnet에 연결되어 있음
+> **TBD**
 
-#### 2. JuiceFS
+### Works 3. Storage Abstraction: JuiceFS Infrastructure Setup
 
 > **TBD**
 
 ---
 
-### Phase 4. K3s Cluster Deployment
+## Phase 4. Provisioning Automation via Ansible
+
+> **TBD**
+
+---
+
+## Phase 5. Hybrid Cluster Orchestration & Realization
 
 > **TBD**
