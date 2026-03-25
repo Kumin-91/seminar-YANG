@@ -14,8 +14,12 @@
           "zone": "cloud"
         },
         "storage": {
-          "type": "mount-only",
-          "cache-size": 5
+            "s3-endpoint": "s3.example.com",
+            "s3-access-key": "kanade",
+            "s3-secret-key": "kanade0420",
+            "redis-endpoint": "100.100.2.200",
+            "redis-password": "kanade0420",
+            "cache-size": 5
         },
         "role-assignment": [
           {

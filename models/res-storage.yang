@@ -5,19 +5,37 @@ module res-storage {
 
     grouping resource-storage {
         container storage {
-            leaf type {
-                type enumeration {
-                    enum s3-backed {
-                        description "JuiceFS의 메인 스토리지가 되는 노드입니다.";
-                    }
 
-                    enum mount-only {
-                        description "JuiceFS의 메인 스토리지 노드에 마운트만 하는 보조 노드입니다.";
-                    }
-                }
+            leaf s3-endpoint {
+                type string;
+                mandatory true;
+                description "S3 호환 저장소(MinIO)의 엔드포인트 도메인 (예: bucket.example.com)";
             }
+            leaf s3-access-key {
+                type string;
+                mandatory true;
+                description "S3 호환 저장소 (MinIO)의 액세스 키";
+            }
+            leaf s3-secret-key {
+                type string;
+                mandatory true;
+                description "S3 호환 저장소 (MinIO)의 시크릿 키";
+            }
+
+            leaf redis-endpoint {
+                type string;
+                mandatory true;
+                description "메타데이터 관리를 위한 Redis 엔드포인트 (예: 100.100.2.200)";
+            }
+            leaf redis-password { 
+                type string; 
+                mandatory true;
+                description "Redis 접속 비밀번호";
+            }
+
             leaf cache-size {
                 type uint32;
+                mandatory true;
                 units "GB";
                 description "로컬 NVMe/SSD 캐시 할당량 (GB 단위)";
             }

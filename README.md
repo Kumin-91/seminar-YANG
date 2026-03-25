@@ -21,19 +21,19 @@
 
 ### Works 1. Strategic Role Allocation & Infrastructure Hierarchy
 
-| Location | Access Point | Storage Node | Control Plane | Worker Node |
-| --- | --- | --- | --- | --- |
-| **AWS** | Primary | ❌ | Primary | Fallback |
-| **Site A** | Secondary | Primary | Secondary | Primary |
-| **Site B** | ❌ | ❌ | ❌ | Secondary |
+| Location | Access Point | Control Plane | Worker Node |
+| --- | --- | --- | --- |
+| **AWS** | Primary | Primary | Fallback |
+| **Site A** | Secondary| Secondary | Primary |
+| **Site B** | ❌ | ❌ | Secondary |
 
 ### Works 2. Hardware Inventory & Compute/Storage Quotas
 
-| Location | Network | Compute | Arch | Burstable | Storage | Cache Quota |
-| --- | --- | --- | --- | --- | --- | --- |
-| AWS | 100.100.2.101 | 2 vCPU / 4GB RAM (t4g.medium) | arm64 | Yes | 32GB (Root EBS) & JuiceFS Mount | 5GB EBS |
-| Site A | 100.100.2.201 | 4 vCPU / 8GB RAM (Mid-Range CPU) | x86_64 | No | S3 Backend & 1TB ZFS Pool | 100GB NVME |
-| Site B | 100.100.2.202 | 2 vCPU / 4GB RAM (Low-Power CPU) | x86_64 | No | JuiceFS Mount Only | 20GB SSD |
+| Location | Network | Compute | Arch | Burstable | Cache Quota |
+| --- | --- | --- | --- | --- | --- 
+| AWS | 100.100.2.101 | 2 vCPU / 4GB RAM (t4g.medium) | arm64 | Yes | 5GB EBS |
+| Site A | 100.100.2.201 | 4 vCPU / 8GB RAM (Mid-Range CPU) | x86_64 | No | 30GB NVME |
+| Site B | 100.100.2.202 | 2 vCPU / 4GB RAM (Low-Power CPU) | x86_64 | No | 20GB SSD |
 
 ### Works 3. Network Topology & Latency Analysis
 
@@ -115,8 +115,12 @@ module: hybrid-cloud
         |  +--rw tailscale-ip    inet:ipv4-address
         |  +--rw zone?           enumeration
         +--rw storage
-           +--rw type?         enumeration
-           +--rw cache-size?   uint32
+           +--rw s3-endpoint       string
+           +--rw s3-access-key     string
+           +--rw s3-secret-key     string
+           +--rw redis-endpoint    string
+           +--rw redis-password    string
+           +--rw cache-size        uint32
 ```
 
 ### Works 2. Data Instance Modeling: Node-specific JSON Manifests
@@ -296,7 +300,7 @@ Host site-b-node
 
 ### Works 3. Storage Abstraction: JuiceFS Infrastructure Setup
 
-> **TBD**
+> Node들과 분리된 스토리지 인프라가 S3-Compatable API 및 Redis 캐시를 제공합니다. 이를 통해 스토리지 인프라도 추상회된 자원으로 관리할 수 있습니다.
 
 ---
 
