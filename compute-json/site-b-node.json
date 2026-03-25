@@ -15,7 +15,7 @@
         },
         "storage": {
             "s3-endpoint": "s3.example.com",
-            "redis-endpoint": "100.100.2.200",
+            "redis-endpoint": "100.100.1.254:4279",
             "secret-file-path": ".env",
             "cache-size": 20
         },

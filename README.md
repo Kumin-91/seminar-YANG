@@ -12,16 +12,49 @@
 
 [Phase 5. Hybrid Cluster Orchestration & Realization](#phase-5-hybrid-cluster-orchestration--realization)
 
-## Working in Progress
+## Project Overview
 
-> [Phase 3. Overlay Networking & Distributed Storage](#phase-3-overlay-networking--distributed-storage)
->> [Works 3. Storage Abstraction: JuiceFS Infrastructure Setup](#works-3-storage-abstraction-juicefs-infrastructure-setup)  
+```plain text
+.
+├── compute-json/                # 노드별 자원 할당 명세 (Manifests)
+│   ├── .env                     # 노드 접속 및 개별 보안 변수
+│   ├── .env.example
+│   ├── aws-t4g-node.json        # AWS 노드 선언문 (arm64/t4g)
+│   ├── site-a-node.json         # Site-A 노드 선언문 (x86/Server)
+│   └── site-b-node.json         # Site-B 노드 선언문 (x86/Agent)
+│
+├── compute-model/               # YANG 기반 인프라 추상화 모델 (Schemas)
+│   ├── common-types.yang        # K3s 역할 및 아키텍처 공통 타입
+│   ├── hybrid-cloud.yang        # 클러스터 통합 관리 최상위 모델
+│   ├── res-compute.yang         # vCPU/Memory 연산 자원 모델
+│   ├── res-network.yang         # Tailscale 기반 네트워크 모델
+│   └── res-storage.yang         # JuiceFS 스토리지 연결 모델
+│
+├── script-onprem/               # 온프레미스 환경 초기화 스크립트
+│   ├── .env                     # SSH/Tailscale Auth Key
+│   ├── .env.example
+│   ├── site-a-node-init.sh      # Site-A VM 인스턴스 초기화
+│   └── site-b-node-init.sh      # Site-B Docker 시스템 컨테이너 구축
+│
+├── storage-onprem/              # JuiceFS 백엔드 인프라 (Storage Provider)
+│   ├── .env                     # Redis/MinIO 자격 증명
+│   ├── .env.example
+│   └── docker-compose.yml       # Metadata/Object Storage 컨테이너 정의
+│
+├── terraform-cloud/             # 클라우드 인프라 자동화 (AWS IaC)
+│   ├── aws-t4g-node.tf          # AWS EC2 리소스 정의
+│   ├── terraform.tfvars         # Terraform 실제 변수 값
+│   └── terraform.tfvars.example
+│
+├── .gitignore                   # 민감 정보 (.env, .tfvars) 유출 방지
+└── README.md                    # 프로젝트 아키텍처 및 단계별 가이드
+```
 
 ## Phase 0. Physical Inventory & Resource Specification
 
 ### Works 1. Strategic Role Allocation & Infrastructure Hierarchy
 
-| Location | Access Point | Control Plane | Worker Node |
+| Location | Gateway/Ingress | Control Plane | Worker Node |
 | --- | --- | --- | --- |
 | **AWS** | Primary | Primary | Fallback |
 | **Site A** | Secondary| Secondary | Primary |
@@ -30,10 +63,10 @@
 ### Works 2. Hardware Inventory & Compute/Storage Quotas
 
 | Location | Network | Compute | Arch | Burstable | Cache Quota |
-| --- | --- | --- | --- | --- | --- 
-| AWS | 100.100.2.101 | 2 vCPU / 4GB RAM (t4g.medium) | arm64 | Yes | 5GB EBS |
-| Site A | 100.100.2.201 | 4 vCPU / 8GB RAM (Mid-Range CPU) | x86_64 | No | 30GB NVME |
-| Site B | 100.100.2.202 | 2 vCPU / 4GB RAM (Low-Power CPU) | x86_64 | No | 20GB SSD |
+| --- | --- | --- | --- | --- | --- |
+| **AWS** | 100.100.2.101 | 2 vCPU / 4GB RAM (t4g.medium) | arm64 | Yes | 5GB EBS |
+| **Site A** | 100.100.2.201 | 4 vCPU / 8GB RAM (Mid-Range CPU) | x86_64 | No | 30GB NVME |
+| **Site B** | 100.100.2.202 | 2 vCPU / 4GB RAM (Low-Power CPU) | x86_64 | No | 20GB SSD |
 
 ### Works 3. Network Topology & Latency Analysis
 
@@ -51,13 +84,13 @@
 
 * K3s 노드 역할과 우선순위를 정의하는 공통 유형 모듈입니다.
 
-### Works 2. Compute Resource Abstraction: [resource-compute.yang](./compute-model/resource-compute.yang)
+### Works 2. Compute Resource Abstraction: [res-compute.yang](./compute-model/res-compute.yang)
 
 * vCPU, Memory, Burstable 여부 등 컴퓨팅 자원 관련 속성을 정의하는 모듈입니다.
 
 * 엄격한 검증을 적용하여 각 노드의 컴퓨팅 자원 사양이 허용된 범위 내에 있도록 합니다.
 
-### Works 3. Network Perimeter & Policy Modeling: [resource-network.yang](./compute-model/resource-network.yang)
+### Works 3. Network Perimeter & Policy Modeling: [res-network.yang](./compute-model/res-network.yang)
 
 * 엄격하게 Tailscale IP 주소만 허용하도록 구성이 된 네트워크 자원 모델입니다.
 
@@ -67,15 +100,19 @@
 
     * Site A, Site B: zone "on-prem"
 
-### Works 4. Distributed Storage Logic Modeling: [resource-storage.yang](./compute-model/resource-storage.yang)
+### Works 4. Distributed Storage Logic Modeling: [res-storage.yang](./compute-model/res-storage.yang)
 
-* JuiceFS의 메인 스토리지 노드와 마운트 전용 보조 노드를 구분하는 스토리지 자원 모델입니다.
+* 컴퓨트 노드가 외부 스토리지 엔진 (MinIO, Redis)에 접근하기 위한 논리적 엔드포인트를 정의합니다.
+
+* 민감한 자격 증명을 직접 모델링하지 않고, secret-file-path 리프를 통해 실질적인 비밀번호가 담긴 `.env` 파일의 경로만 선언하도록 설계했습니다.
 
 * 캐시 할당량을 GB 단위로 명확히 정의하여, 각 노드의 스토리지 자원 사양이 허용된 범위 내에 있도록 합니다.
 
 ### Works 5. Holistic Cluster Integration: [hybrid-cloud.yang](./compute-model/hybrid-cloud.yang)
 
 * 클러스터 전체를 포괄하는 최상위 모델로, 각 노드의 역할과 자원 사양을 통합적으로 표현합니다.
+
+* 각 리소스 모듈을 컴포지션 구조로 통합하여 단일 엔드포인트를 제공합니다.
 
 ---
 
@@ -95,7 +132,7 @@ yanglint --version
 ### Works 1. Hierarchical Schema Visualization & Structural Audit
 
 ```bash
-yanglint -f tree ./models/hybrid-cloud.yang
+yanglint -f tree ./compute-model/hybrid-cloud.yang
 ```
 
 ```plain text
@@ -134,9 +171,9 @@ module: hybrid-cloud
 ### Works 3. Schema Compliance Verification & Data Integrity Audit
 
 ```bash
-yanglint -p models -t data compute-models/hybrid-cloud.yang compute-json/aws-t4g-node.json
-yanglint -p models -t data compute-models/hybrid-cloud.yang compute-json/site-a-node.json
-yanglint -p models -t data compute-models/hybrid-cloud.yang compute-json/site-b-node.json
+yanglint -p compute-model -t data compute-model/hybrid-cloud.yang compute-json/aws-t4g-node.json
+yanglint -p compute-model -t data compute-model/hybrid-cloud.yang compute-json/site-a-node.json
+yanglint -p compute-model -t data compute-model/hybrid-cloud.yang compute-json/site-b-node.json
 ```
 
 ### Works 4. Exception Handling & Constraint Enforcement Scenarios
@@ -298,7 +335,26 @@ Host site-b-node
 
 ### Works 3. Storage Abstraction: JuiceFS Infrastructure Setup
 
-> Node들과 분리된 스토리지 인프라가 S3-Compatable API 및 Redis 캐시를 제공합니다. 이를 통해 스토리지 인프라도 추상회된 자원으로 관리할 수 있습니다.
+> 컴퓨트 노드와 완전히 격리된 독립형 스토리지 엔진을 구축합니다. S3 호환 API (MinIO)와 고성능 메타데이터 엔진 (Redis)을 추상화된 자원으로 제공하여 하이브리드 클러스터의 데이터 일관성을 보장합니다.
+
+#### 1. Containerized Storage Backend Deployment
+
+* **[docker-compose.yml](./storage-onprem/docker-compose.yml)** 을 활용하여 스토리지 백엔드를 코드화 했습니다.
+
+* Host OS의 환경에 의존하지 않고, 컨테이너 기술을 통해 엔진의 배포와 버전 관리를 단순화했습니다.
+
+#### 2. Technical Highlights
+
+* MinIO의 데이터 영속성을 위해 ZFS Storage Pool을 직접 매핑하여 데이터 안정성과 성능을 극대화했습니다.
+
+* 기존 서비스 및 시스템 서비스와의 포트 간섭을 원천 차단하기 위해 전용 포트를 할당했습니다.
+
+#### 3. Storage Provider Specs
+
+| Component | Service | Port | Backend Storage |
+| --- | --- | --- | --- |
+| Metadata Engine | Redis | 4279 | Docker Volume (on NVME) |
+| Object Storage | MinIO | 4200 (S3 API) / 4201 (Dashboard) | ZFS Dataset |
 
 ---
 
