@@ -2,29 +2,31 @@
   "hybrid-cloud:cluster": {
     "node": [
       {
-        "name": "site-b-node",
+        "name": "site-a-node",
         "compute": {
           "arch": "x86_64",
-          "vcpu": 2,
-          "memory": 4,
+          "vcpu": 4,
+          "memory": 8,
           "burstable": false
         },
         "network": {
-          "tailscale-ip": "100.100.2.202",
+          "tailscale-ip": "100.100.2.201",
           "zone": "on-prem"
         },
         "storage": {
             "s3-endpoint": "s3.example.com",
-            "s3-access-key": "kanade",
-            "s3-secret-key": "kanade0420",
             "redis-endpoint": "100.100.2.200",
-            "redis-password": "kanade0420",
-            "cache-size": 20
+            "secret-file-path": ".env",
+            "cache-size": 30
         },
         "role-assignment": [
           {
-            "role": "agent",
+            "role": "server",
             "priority": "secondary"
+          },
+          {
+            "role": "agent",
+            "priority": "primary"
           }
         ]
       }
