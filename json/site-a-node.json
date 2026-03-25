@@ -2,7 +2,21 @@
   "hybrid-cloud:cluster": {
     "node": [
       {
-        "name": "Site-A-Storage-Node",
+        "name": "site-a-node",
+        "compute": {
+          "arch": "x86_64",
+          "vcpu": 4,
+          "memory": 8,
+          "burstable": false
+        },
+        "network": {
+          "tailscale-ip": "100.100.2.201",
+          "zone": "on-prem"
+        },
+        "storage": {
+          "type": "s3-backed",
+          "cache-size": 100
+        },
         "role-assignment": [
           {
             "role": "server",
@@ -12,20 +26,7 @@
             "role": "agent",
             "priority": "primary"
           }
-        ],
-        "compute": {
-          "vcpu": 4,
-          "memory": 8,
-          "burstable": true
-        },
-        "network": {
-          "tailscale-ip": "100.100.1.254",
-          "zone": "on-prem"
-        },
-        "storage": {
-          "type": "s3-backed",
-          "cache-size": 100
-        }
+        ]
       }
     ]
   }

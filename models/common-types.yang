@@ -3,6 +3,13 @@ module common-types {
     namespace "urn:csmin:params:xml:ns:yang:common-types";
     prefix ct;
 
+    typedef cpu-arch {
+        type enumeration {
+            enum x86_64;
+            enum arm64;
+        }
+    }
+
     typedef k3s-role {
         type enumeration {
             enum server;

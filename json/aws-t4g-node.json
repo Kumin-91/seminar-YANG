@@ -2,25 +2,29 @@
   "hybrid-cloud:cluster": {
     "node": [
       {
-        "name": "site-b-node",
+        "name": "aws-t4g-node",
         "compute": {
-          "arch": "x86_64",
+          "arch": "arm64",
           "vcpu": 2,
           "memory": 4,
-          "burstable": false
+          "burstable": true
         },
         "network": {
-          "tailscale-ip": "100.100.2.202",
-          "zone": "on-prem"
+          "tailscale-ip": "100.100.2.101",
+          "zone": "cloud"
         },
         "storage": {
           "type": "mount-only",
-          "cache-size": 20
+          "cache-size": 5
         },
         "role-assignment": [
           {
+            "role": "server",
+            "priority": "primary"
+          },
+          {
             "role": "agent",
-            "priority": "secondary"
+            "priority": "fallback"
           }
         ]
       }

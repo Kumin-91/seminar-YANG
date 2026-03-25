@@ -3,15 +3,23 @@ module res-compute {
     namespace "urn:csmin:params:xml:ns:yang:res-compute";
     prefix rc;
 
+    import common-types { prefix ct; }
+
     grouping resource-compute {
         container compute {
             description "논리적 연산 자원 정의 그룹입니다.";
 
+            leaf arch {
+                type ct:cpu-arch;
+                mandatory true;
+                description "CPU 아키텍처 유형 (x86_64 또는 arm64)";
+            }
+
             leaf vcpu {
                 type uint8 {
-                    range "1..12";
+                    range "1..8";
                 }
-                description "가상 CPU 코어 수 (1~12)";
+                description "가상 CPU 코어 수 (1-8)";
             }
 
             leaf memory {
@@ -19,7 +27,7 @@ module res-compute {
                     range "1..16";
                 }
                 units "GB";
-                description "할당된 메모리 용량 (GB 단위, 1~16)";
+                description "할당된 메모리 용량 (GB 단위, 1-16)";
             }
 
             leaf burstable {

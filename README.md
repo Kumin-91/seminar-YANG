@@ -15,8 +15,6 @@
 ## Working in Progress
 
 > [Phase 3. Overlay Networking & Distributed Storage](#phase-3-overlay-networking--distributed-storage)
->> [Works 1. Node Realization: Instance Provisioning](#works-1-node-realization-instance-provisioning)  
->> [Works 2. Overlay Connectivity: Tailscale Mesh Integration](#works-2-overlay-connectivity-tailscale-mesh-integration)  
 >> [Works 3. Storage Abstraction: JuiceFS Infrastructure Setup](#works-3-storage-abstraction-juicefs-infrastructure-setup)  
 
 ## Phase 0. Physical Inventory & Resource Specification
@@ -31,11 +29,11 @@
 
 ### Works 2. Hardware Inventory & Compute/Storage Quotas
 
-| Location | Network | Compute | Burstable | Storage | Cache Quota |
-| --- | --- | --- | --- | --- | --- |
-| AWS | 100.100.1.AWS | 2 vCPU / 4GB RAM (t3.medium) | Yes | 20GB (Root EBS) & JuiceFS Mount | 5GB EBS |
-| Site A | 100.100.1.AAA | 4 vCPU / 8GB RAM (Mid-Range CPU) | Yes (Up to 8 vCPU / 16GB RAM) | S3 Backend & 1TB ZFS Pool | 100GB NVME |
-| Site B | 100.100.1.BBB | 2 vCPU / 4GB RAM (Low-Power CPU) | No | JuiceFS Mount Only | 20GB SSD |
+| Location | Network | Compute | Arch | Burstable | Storage | Cache Quota |
+| --- | --- | --- | --- | --- | --- | --- |
+| AWS | 100.100.2.101 | 2 vCPU / 4GB RAM (t4g.medium) | arm64 | Yes | 32GB (Root EBS) & JuiceFS Mount | 5GB EBS |
+| Site A | 100.100.2.201 | 4 vCPU / 8GB RAM (Mid-Range CPU) | x86_64 | No | S3 Backend & 1TB ZFS Pool | 100GB NVME |
+| Site B | 100.100.2.202 | 2 vCPU / 4GB RAM (Low-Power CPU) | x86_64 | No | JuiceFS Mount Only | 20GB SSD |
 
 ### Works 3. Network Topology & Latency Analysis
 
@@ -97,7 +95,7 @@ yanglint --version
 ### Works 1. Hierarchical Schema Visualization & Structural Audit
 
 ```bash
-yanglint -f tree ./models/hybrid-cloud.yang  
+yanglint -f tree ./models/hybrid-cloud.yang
 ```
 
 ```plain text
@@ -109,6 +107,7 @@ module: hybrid-cloud
         |  +--rw role        ct:k3s-role
         |  +--rw priority    ct:node-role
         +--rw compute
+        |  +--rw arch         ct:cpu-arch
         |  +--rw vcpu?        uint8
         |  +--rw memory?      uint8
         |  +--rw burstable?   boolean
@@ -124,16 +123,16 @@ module: hybrid-cloud
 
 **[Phase 0. Physical Inventory](#phase-0-physical-inventory)** 에서 정의한 리소스 사양에 따라, 각 노드에 대한 JSON 데이터를 작성하였습니다.
 
-* **[AWS Node Example](./json/aws-node.json)**
+* **[aws-t4g-node Example](./json/aws-t4g-node.json)**
 
-* **[Site A Node Example](./json/site-a-node.json)**
+* **[site-a-node Example](./json/site-a-node.json)**
 
-* **[Site B Node Example](./json/site-b-node.json)**
+* **[site-b-node Example](./json/site-b-node.json)**
 
 ### Works 3. Schema Compliance Verification & Data Integrity Audit
 
 ```bash
-yanglint -p models -t data models/hybrid-cloud.yang json/aws-node.json
+yanglint -p models -t data models/hybrid-cloud.yang json/aws-t4g-node.json
 yanglint -p models -t data models/hybrid-cloud.yang json/site-a-node.json
 yanglint -p models -t data models/hybrid-cloud.yang json/site-b-node.json
 ```
@@ -146,7 +145,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
     ```plain text
     libyang err : Unsatisfied pattern - "100.10.1.201" does not conform to "100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)". (Schema location /hybrid-cloud:cluster/node/network/tailscale-ip, data location /hybrid-cloud:network, line number 22.)
-    YANGLINT[E]: Failed to parse input data file "json/aws-node.json".
+    YANGLINT[E]: Failed to parse input data file "json/aws-t4g-node.json".
     ```
 
 * 필드의 값이 허용된 범위를 벗어난 경우
@@ -160,11 +159,140 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ## Phase 3. Overlay Networking & Distributed Storage
 
+`Works 1.` - `Works 2. (~1. Tailscale)` 과정까지의 자동화 스크립트가 존재합니다.
+
+* **[Terraform: aws-t4g-node.tf](scripts/aws-t4g-node.tf)**
+
+* **[Shell Script: site-a-node-init.sh](scripts/site-a-node-init.sh)**
+
+* **[Shell Script: site-b-node-init.sh](scripts/site-b-node-init.sh)**
+
 ### Works 1. Node Realization: Instance Provisioning
+
+#### 0. Shared Public Key Authentication Setup
+
+```bash
+# 로컬에서 SSH Key Pair 생성
+ssh-keygen -t ed25519 -f ~/.ssh/hybrid-cloud_key -N ""
+
+# 생성된 공개 키 확인
+cat ~/.ssh/hybrid-cloud_key.pub
+```
+
+#### 1. aws-t4g-node
+
+> Terraform으로 프로비저닝 및 초기 설정이 완료된 AWS EC2 인스턴스 환경
+
+```bash
+# 호스트 이름 변경
+sudo hostnamectl set-hostname aws-t4g-node
+
+# OpenSSH Server 설치 및 서비스 시작
+sudo dnf update -y
+sudo dnf install -y openssh-server
+sudo systemctl enable --now sshd
+```
+
+#### 2. site-a-node
+
+> KVM Hypervisor 가반의 VM 환경
+
+```bash
+# 호스트 이름 변경
+sudo hostnamectl set-hostname site-a-node
+
+# OpenSSH Server 설치 및 서비스 시작
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y openssh-server
+sudo systemctl enable --now ssh
+
+# Public Key 등록
+mkdir -p ~/.ssh
+chmod 700 ~/.ssh
+echo "<PUBLIC_KEY>" >> ~/.ssh/authorized_keys
+chmod 600 ~/.ssh/authorized_keys
+```
+
+#### 3. site-b-node
+
+> Docker 기반 시스템 컨테이너를 활용한 VM 런타임 에뮬레이션
+
+```bash
+# Debian 13 Container 생성
+docker run -d --name site-b-node --hostname site-b-node \
+    --privileged --device /dev/net/tun:/dev/net/tun \
+    -v /sys/fs/cgroup:/sys/fs/cgroup:rw --cgroupns host \
+    jrei/systemd-debian
+
+# 컨테이너 내부 환경 구축 - 필요 패키지 설치, SSH 접속 설정
+docker exec -it site-b-node bash -c "
+    apt update && apt upgrade -y && apt install -y openssh-server sudo curl locales && 
+    sed -i '/en_US.UTF-8 UTF-8/s/^# //g' /etc/locale.gen && locale-gen &&
+    rm -f /etc/nologin && mkdir -p /run/sshd &&
+    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && 
+    systemctl enable --now ssh
+"
+
+# Public Key 등록
+docker exec -it site-b-node bash -c "
+    mkdir -p ~/.ssh && chmod 700 ~/.ssh && 
+    echo '<PUBLIC_KEY>' >> ~/.ssh/authorized_keys && 
+    chmod 600 ~/.ssh/authorized_keys
+"
+```
 
 ### Works 2. Overlay Connectivity: Tailscale Mesh Integration
 
-> **TBD**
+#### 1. Tailscale
+
+* aws-t4g-node & site-a-node
+
+    ```bash
+    # Tailscale 설치
+    curl -fsSL https://tailscale.com/install.sh | sh
+
+    # Tailscale Login & Up
+    sudo tailscale up --authkey <TAILSCALE_AUTH_KEY> --hostname $(hostname) --accept-dns=false --accept-routes=false
+    ```
+
+* site-b-node
+
+    ```bash
+    # 컨테이너 내부에서 Tailscale 설치 및 연결
+    docker exec -it site-b-node bash -c "
+        curl -fsSL https://tailscale.com/install.sh | sh &&
+        sudo systemctl enable --now tailscaled &&
+        tailscale up --authkey <TAILSCALE_AUTH_KEY> --hostname site-b-node --accept-dns=false --accept-routes=false
+    "
+    ```
+
+#### 2. Admin Console에서 IP 주소 할당
+
+* aws-t4g-node: `100.100.2.101`
+
+* site-a-node: `100.100.2.201`
+
+* site-b-node: `100.100.2.202`
+
+#### 3. Management Laptop (neptune-mbp)
+
+```ini
+# ~/.ssh/config 파일에 다음 내용 추가
+Host aws-t4g-node
+    HostName 100.100.2.101
+    User ec2-user
+    IdentityFile ~/.ssh/hybrid-cloud_key
+
+Host site-a-node
+    HostName 100.100.2.201
+    User debian
+    IdentityFile ~/.ssh/hybrid-cloud_key
+
+Host site-b-node
+    HostName 100.100.2.202
+    User root
+    IdentityFile ~/.ssh/hybrid-cloud_key
+```
 
 ### Works 3. Storage Abstraction: JuiceFS Infrastructure Setup
 
@@ -173,6 +301,16 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 ---
 
 ## Phase 4. Provisioning Automation via Ansible
+
+### Works 1. Data-to-Code: JSON-to-Ansible Manifest Transformation
+
+> **TBD**
+
+### Works 2. Role-based Playbook Logic & Jinja2 Templating
+
+> **TBD**
+
+### Works 3. Idempotent Infrastructure Provisioning
 
 > **TBD**
 
