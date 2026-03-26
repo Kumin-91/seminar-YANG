@@ -323,13 +323,13 @@ Host site-b-node
 
 > 컴퓨트 노드와 완전히 격리된 독립형 스토리지 엔진을 구축합니다. S3 호환 API (MinIO)와 고성능 메타데이터 엔진 (Redis)을 추상화된 자원으로 제공하여 하이브리드 클러스터의 데이터 일관성을 보장합니다.
 
-### Works 4.1 Containerized Storage Backend Deployment
+### Works 1. Containerized Storage Backend Deployment
 
 * **[docker-compose.yml](./04-storage-provider/docker-compose.yml)** 을 활용하여 스토리지 백엔드를 코드화 했습니다.
 
 * Host OS의 환경에 의존하지 않고, 컨테이너 기술을 통해 엔진의 배포와 버전 관리를 단순화했습니다.
 
-### Works 4.2 Storage Provider Specs & Technical Highlights
+### Works 2. Storage Provider Specs & Technical Highlights
 
 | Component | Service | Port | Backend Storage |
 | --- | --- | --- | --- |
