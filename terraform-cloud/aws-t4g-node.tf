@@ -1,6 +1,6 @@
 # 변수 정의
 variable "public_key" { type = string }
-variable "tailscale_auth_key" { type = string}
+variable "tailscale_auth_key" { type = string }
 
 # 0. provider 설정
 provider "aws" {
@@ -17,14 +17,6 @@ resource "aws_key_pair" "hybrid_cloud" {
 resource "aws_security_group" "hybrid_cloud_sg" {
     name        = "hybrid-cloud-sg"
     description = "Allow SSH and Tailscale traffic" 
-
-    # SSH
-    ingress {
-      from_port   = 22
-      to_port     = 22
-      protocol    = "tcp"
-      cidr_blocks = ["0.0.0.0/0"]
-    }   
 
     # Tailscale
     ingress {
@@ -50,12 +42,19 @@ resource "aws_instance" "aws_t4g_node" {
     key_name      = aws_key_pair.hybrid_cloud.key_name
     vpc_security_group_ids = [aws_security_group.hybrid_cloud_sg.id]
 
+    root_block_device {
+        volume_size = 20
+        volume_type = "gp3"
+    }
+
     # 인스턴스가 패킷의 최종 목적지가 아니더라도 통과시킬 수 있게 합니다.
     source_dest_check = false
 
     # 초기화 자동화 (User Data)
     user_data = <<-EOF
                 #!/bin/bash
+                set -xe
+                exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
                 hostnamectl set-hostname aws-t4g-node
                 dnf update -y
                 curl -fsSL https://tailscale.com/install.sh | sh

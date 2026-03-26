@@ -198,17 +198,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ## Phase 3. Overlay Networking & Distributed Storage
 
-`Works 1.` - `Works 2. (~1. Tailscale)` 과정까지의 자동화 스크립트가 존재합니다.
-
-* **[Terraform: aws-t4g-node.tf](./terraform-cloud/aws-t4g-node.tf)**
-
-* **[Shell Script: site-a-node-init.sh](./script-onprem/site-a-node-init.sh)**
-
-* **[Shell Script: site-b-node-init.sh](./script-onprem/site-b-node-init.sh)**
-
-### Works 1. Node Realization: Instance Provisioning
-
-#### 0. Shared Public Key Authentication Setup
+### Works 0. Shared Public Key Authentication Setup
 
 ```bash
 # 로컬에서 SSH Key Pair 생성
@@ -218,21 +208,26 @@ ssh-keygen -t ed25519 -f ~/.ssh/hybrid-cloud_key -N ""
 cat ~/.ssh/hybrid-cloud_key.pub
 ```
 
-#### 1. aws-t4g-node
+### Works 1. EC2 Instance Provisioning: [aws-t4g-node.tf](./terraform-cloud/aws-t4g-node.tf)
 
 > Terraform으로 프로비저닝 및 초기 설정이 완료된 AWS EC2 인스턴스 환경
 
-```bash
-# 호스트 이름 변경
-sudo hostnamectl set-hostname aws-t4g-node
-
-# OpenSSH Server 설치 및 서비스 시작
-sudo dnf update -y
-sudo dnf install -y openssh-server
-sudo systemctl enable --now sshd
+```Terraform
+# 초기화 자동화 (User Data)
+user_data = <<-EOF
+            #!/bin/bash
+            set -xe
+            exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+            hostnamectl set-hostname aws-t4g-node
+            dnf update -y
+            curl -fsSL https://tailscale.com/install.sh | sh
+            tailscale up --authkey ${var.tailscale_auth_key} --hostname aws-t4g-node --accept-dns=false --accept-routes=false
+            EOF
 ```
 
-#### 2. site-a-node
+* Hostname 설정, Tailscale 설치 및 연결을 포함한 초기화 스크립트를 User Data로 자동화하여, 인스턴스가 시작될 때 필요한 설정이 자동으로 적용되도록 했습니다.
+
+### Works 2. On-Prem VM Setup: [site-a-node-init.sh](./script-onprem/site-a-node-init.sh)
 
 > KVM Hypervisor 가반의 VM 환경
 
@@ -250,9 +245,15 @@ mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 echo "<PUBLIC_KEY>" >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
+
+# Tailscale 설치
+curl -fsSL https://tailscale.com/install.sh | sh
+
+# Tailscale 연결
+sudo tailscale up --authkey <TAILSCALE_AUTH_KEY> --hostname $(hostname) --accept-dns=false --accept-routes=false
 ```
 
-#### 3. site-b-node
+### Works 3. On-Prem Container Setup: [site-b-node-init.sh](./script-onprem/site-b-node-init.sh)
 
 > Docker 기반 시스템 컨테이너를 활용한 VM 런타임 에뮬레이션
 
@@ -278,34 +279,18 @@ docker exec -it site-b-node bash -c "
     echo '<PUBLIC_KEY>' >> ~/.ssh/authorized_keys && 
     chmod 600 ~/.ssh/authorized_keys
 "
+
+# Tailscale 설치 및 연결
+docker exec -it site-b-node bash -c "
+    curl -fsSL https://tailscale.com/install.sh | sh &&
+    sudo systemctl enable --now tailscaled &&
+    tailscale up --authkey <TAILSCALE_AUTH_KEY> --hostname site-b-node --accept-dns=false --accept-routes=false
+"
 ```
 
-### Works 2. Overlay Connectivity: Tailscale Mesh Integration
+### Works 4. IP Configuration & Management Laptop Configuration
 
-#### 1. Tailscale
-
-* aws-t4g-node & site-a-node
-
-    ```bash
-    # Tailscale 설치
-    curl -fsSL https://tailscale.com/install.sh | sh
-
-    # Tailscale Login & Up
-    sudo tailscale up --authkey <TAILSCALE_AUTH_KEY> --hostname $(hostname) --accept-dns=false --accept-routes=false
-    ```
-
-* site-b-node
-
-    ```bash
-    # 컨테이너 내부에서 Tailscale 설치 및 연결
-    docker exec -it site-b-node bash -c "
-        curl -fsSL https://tailscale.com/install.sh | sh &&
-        sudo systemctl enable --now tailscaled &&
-        tailscale up --authkey <TAILSCALE_AUTH_KEY> --hostname site-b-node --accept-dns=false --accept-routes=false
-    "
-    ```
-
-#### 2. Admin Console에서 IP 주소 할당
+#### 1. Tailscale Admin Console에서 IP 주소 할당
 
 * aws-t4g-node: `100.100.2.101`
 
@@ -313,10 +298,9 @@ docker exec -it site-b-node bash -c "
 
 * site-b-node: `100.100.2.202`
 
-#### 3. Management Laptop (neptune-mbp)
+#### 2. `~/.ssh/config`
 
 ```ini
-# ~/.ssh/config 파일에 다음 내용 추가
 Host aws-t4g-node
     HostName 100.100.2.101
     User ec2-user
@@ -333,7 +317,7 @@ Host site-b-node
     IdentityFile ~/.ssh/hybrid-cloud_key
 ```
 
-### Works 3. Storage Abstraction: JuiceFS Infrastructure Setup
+### Works 5. Storage Abstraction: JuiceFS Infrastructure Setup
 
 > 컴퓨트 노드와 완전히 격리된 독립형 스토리지 엔진을 구축합니다. S3 호환 API (MinIO)와 고성능 메타데이터 엔진 (Redis)을 추상화된 자원으로 제공하여 하이브리드 클러스터의 데이터 일관성을 보장합니다.
 
