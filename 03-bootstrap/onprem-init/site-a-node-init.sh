@@ -6,17 +6,21 @@
 # Description: KVM Hypervisor 가반의 VM 환경
 # =================================================================
 
-export "$(grep -v '^#' .env | xargs)"
-
 HOST_NAME="site-a-node"
+KEY_PATH="node-bootstrap.env"
+if [ -f $KEY_PATH ]; then
+    set -a && source $KEY_PATH && set +a
+else
+    echo "Error: .env file not found!"
+    exit 1
+fi
 
 echo "🚀 [1/4] Hostname 설정..."
 sudo hostnamectl set-hostname $HOST_NAME
 
 echo "📦 [2/4] SSH Server 설정..."
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y openssh-server
-sudo systemctl enable --now ssh
+sudo apt install -y openssh-server curl
 
 echo "🔑 [3/4] 원격 접속을 위한 Public Key 등록..."
 mkdir -p ~/.ssh

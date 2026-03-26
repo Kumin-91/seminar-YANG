@@ -1,0 +1,3 @@
+S3_ACCESS_KEY="kanade"
+S3_SECRET_KEY="kanade"
+REDIS_PASSWORD="kanade"

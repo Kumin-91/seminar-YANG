@@ -4,6 +4,7 @@ services:
     image: redis:latest
     container_name: jfs-redis
     restart: unless-stopped
+    env_file: storage-provider.env
     ports:
       - 4279:6379
     volumes:
@@ -22,6 +23,7 @@ services:
     image: minio/minio:latest
     container_name: jfs-minio
     restart: unless-stopped
+    env_file: storage-provider.env
     ports:
       - 4200:9000
       - 4201:9001

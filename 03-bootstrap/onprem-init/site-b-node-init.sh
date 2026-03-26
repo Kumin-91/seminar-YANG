@@ -6,9 +6,14 @@
 # Description: Docker 기반 시스템 컨테이너를 활용한 VM 런타임 에뮬레이션
 # =================================================================
 
-export "$(grep -v '^#' .env | xargs)"
-
 CONTAINER_NAME="site-b-node"
+KEY_PATH="node-bootstrap.env"
+if [ -f $KEY_PATH ]; then
+    set -a && source $KEY_PATH && set +a
+else
+    echo "Error: .env file not found!"
+    exit 1
+fi
 
 echo "🚀 [1/4] 기존 컨테이너 정리 및 새 컨테이너 생성..."
 docker rm -f $CONTAINER_NAME 2>/dev/null

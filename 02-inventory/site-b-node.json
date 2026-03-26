@@ -2,31 +2,27 @@
   "hybrid-cloud:cluster": {
     "node": [
       {
-        "name": "aws-t4g-node",
+        "name": "site-b-node",
         "compute": {
-          "arch": "arm64",
+          "arch": "x86_64",
           "vcpu": 2,
           "memory": 4,
-          "burstable": true
+          "burstable": false
         },
         "network": {
-          "tailscale-ip": "100.100.2.101",
-          "zone": "cloud"
+          "tailscale-ip": "100.100.2.202",
+          "zone": "on-prem"
         },
         "storage": {
             "s3-endpoint": "s3.example.com",
             "redis-endpoint": "100.100.1.254:4279",
-            "secret-file-path": ".env",
-            "cache-size": 5
+            "secret-file-path": "storage.env",
+            "cache-size": 20
         },
         "role-assignment": [
           {
-            "role": "server",
-            "priority": "primary"
-          },
-          {
             "role": "agent",
-            "priority": "fallback"
+            "priority": "secondary"
           }
         ]
       }
