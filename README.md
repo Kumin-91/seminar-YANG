@@ -1,16 +1,18 @@
 # One Logical Infrastructure, Many Physical Realities: A YANG-Driven Hybrid Cloud with K3s
 
-[Phase 0. Physical Inventory & Resource Specification](#phase-0-physical-inventory)
+[Phase 0. Physical Inventory & Resource Specification](#phase-0-physical-inventory--resource-specification)
 
 [Phase 1. Logical Abstraction via YANG Modeling](#phase-1-logical-abstraction-via-yang-modeling)
 
 [Phase 2. Data Integrity & Schema Validation](#phase-2-data-integrity--schema-validation)
 
-[Phase 3. Overlay Networking & Distributed Storage](#phase-3-overlay-networking--distributed-storage)
+[Phase 3. Bootstrap & Overlay Networking: Tailscale-based Connectivity](#phase-3-bootstrap--overlay-networking-tailscale-based-connectivity)
 
-[Phase 4. Provisioning Automation via Ansible](#phase-4-provisioning-automation-via-ansible)
+[Phase 4. Storage Abstraction: JuiceFS Infrastructure Setup](#phase-4-storage-abstraction-juicefs-infrastructure-setup)
 
-[Phase 5. Hybrid Cluster Orchestration & Realization](#phase-5-hybrid-cluster-orchestration--realization)
+[Phase 5. Provisioning Automation via Ansible](#phase-5-provisioning-automation-via-ansible)
+
+[Phase 6. Hybrid Cluster Orchestration & Realization](#phase-6-hybrid-cluster-orchestration--realization)
 
 ## Project Overview
 
@@ -160,7 +162,7 @@ module: hybrid-cloud
 
 ### Works 2. Data Instance Modeling: Node-specific JSON Manifests
 
-**[Phase 0. Physical Inventory](#phase-0-physical-inventory)** 에서 정의한 리소스 사양에 따라, 각 노드에 대한 JSON 데이터를 작성하였습니다.
+**[Phase 0. Physical Inventory & Resource Specification](#phase-0-physical-inventory--resource-specification)** 에서 정의한 리소스 사양에 따라, 각 노드에 대한 JSON 데이터를 작성하였습니다.
 
 * **[aws-t4g-node Example](./02-inventory/aws-t4g-node.json)**
 
@@ -196,7 +198,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ---
 
-## Phase 3. Overlay Networking & Distributed Storage
+## Phase 3. Bootstrap & Overlay Networking: Tailscale-based Connectivity
 
 ### Works 0. Shared Public Key Authentication Setup
 
@@ -317,47 +319,35 @@ Host site-b-node
     IdentityFile ~/.ssh/hybrid-cloud_key
 ```
 
-### Works 5. Storage Abstraction: JuiceFS Infrastructure Setup
+## Phase 4. Storage Abstraction: JuiceFS Infrastructure Setup
 
 > 컴퓨트 노드와 완전히 격리된 독립형 스토리지 엔진을 구축합니다. S3 호환 API (MinIO)와 고성능 메타데이터 엔진 (Redis)을 추상화된 자원으로 제공하여 하이브리드 클러스터의 데이터 일관성을 보장합니다.
 
-#### 1. Containerized Storage Backend Deployment
+### Works 4.1 Containerized Storage Backend Deployment
 
 * **[docker-compose.yml](./04-storage-provider/docker-compose.yml)** 을 활용하여 스토리지 백엔드를 코드화 했습니다.
 
 * Host OS의 환경에 의존하지 않고, 컨테이너 기술을 통해 엔진의 배포와 버전 관리를 단순화했습니다.
 
-#### 2. Technical Highlights
-
-* MinIO의 데이터 영속성을 위해 ZFS Storage Pool을 직접 매핑하여 데이터 안정성과 성능을 극대화했습니다.
-
-* 기존 서비스 및 시스템 서비스와의 포트 간섭을 원천 차단하기 위해 전용 포트를 할당했습니다.
-
-#### 3. Storage Provider Specs
+### Works 4.2 Storage Provider Specs & Technical Highlights
 
 | Component | Service | Port | Backend Storage |
 | --- | --- | --- | --- |
 | Metadata Engine | Redis | 4279 | Docker Volume (on NVME) |
 | Object Storage | MinIO | 4200 (S3 API) / 4201 (Dashboard) | ZFS Dataset |
 
+* MinIO의 데이터 영속성을 위해 ZFS Storage Pool을 직접 매핑하여 데이터 안정성과 성능을 극대화했습니다.
+
+* 기존 서비스 및 시스템 서비스와의 포트 간섭을 원천 차단하기 위해 전용 포트를 할당했습니다.
+
 ---
 
-## Phase 4. Provisioning Automation via Ansible
-
-### Works 1. Data-to-Code: JSON-to-Ansible Manifest Transformation
-
-> **TBD**
-
-### Works 2. Role-based Playbook Logic & Jinja2 Templating
-
-> **TBD**
-
-### Works 3. Idempotent Infrastructure Provisioning
+## Phase 5. Provisioning Automation via Ansible
 
 > **TBD**
 
 ---
 
-## Phase 5. Hybrid Cluster Orchestration & Realization
+## Phase 6. Hybrid Cluster Orchestration & Realization
 
 > **TBD**
