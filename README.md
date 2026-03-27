@@ -8,9 +8,11 @@
 
 [Phase 3. Storage Abstraction: JuiceFS Infrastructure Setup](#phase-3-storage-abstraction-juicefs-infrastructure-setup)
 
+[Phase 4. Automating Node Provisioning with Terraform & Shell Scripting](#phase-4-automating-node-provisioning-with-terraform--shell-scripting)
+
 ## Phase 0. Physical Inventory & Resource Specification
 
-### Works 1. Strategic Role Allocation & Infrastructure Hierarchy
+### Step 1. Strategic Role Allocation & Infrastructure Hierarchy
 
 | Location | Gateway/Ingress | Control Plane | Worker Node |
 | --- | --- | --- | --- |
@@ -18,7 +20,7 @@
 | **Site A** | Secondary| Secondary | Primary |
 | **Site B** | ❌ | ❌ | Secondary |
 
-### Works 2. Hardware Inventory & Compute/Storage Quotas
+### Step 2. Hardware Inventory & Compute/Storage Quotas
 
 | Location | IP | Port | Compute | Arch | Burstable | Cache Quota |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -32,13 +34,13 @@
 
 ## Phase 1. Logical Abstraction via YANG Modeling
 
-### Works 1. Base Type Definitions: [common-types.yang](./01-schema/common-types.yang)
+### Step 1. Base Type Definitions: [common-types.yang](./01-schema/common-types.yang)
 
 * Platform (AWS/On-Premise), Arch, K3s Role 등에 대한 표준 데이터 타입을 정의합니다.
 
 * AWS 인스턴스 타입은 정규표현식을 통해 medium 이하 규격으로 엄격히 제한됩니다.
 
-### Works 2. Compute Resource Abstraction: [res-compute.yang](./01-schema/res-compute.yang)
+### Step 2. Compute Resource Abstraction: [res-compute.yang](./01-schema/res-compute.yang)
 
 * 플랫폼별 연산 자원 명세를 담당하며, Platform 값에 따라 입력 항목을 동적으로 강제합니다.
 
@@ -46,19 +48,19 @@
 
 * On-Premise: vCPU 및 Memory 범위를 직접 지정하여 하드웨어 제약 내에서 자원을 선언합니다.
 
-### Works 3. Network Perimeter & Policy Modeling: [res-network.yang](./01-schema/res-network.yang)
+### Step 3. Network Perimeter & Policy Modeling: [res-network.yang](./01-schema/res-network.yang)
 
 * 초기 프로비저닝 (Underlay)을 위한 접속 계정과 포트 정보를 정의합니다.
 
 * AWS의 Late Binding 전략과 On-Premise의 Early Binding 전략을 구분하여 모델링합니다.
 
-### Works 4. Distributed Storage Logic Modeling: [res-storage.yang](./01-schema/res-storage.yang)
+### Step 4. Distributed Storage Logic Modeling: [res-storage.yang](./01-schema/res-storage.yang)
 
 * 분산 스토리지 (JuiceFS) 환경 구성을 위한 엔드포인트와 캐시 정책을 정의합니다.
 
-* `secret-file-path`를 통해 민감한 자격 증명을 모델에서 분리하여 보안 사고를 원천 차단합니다.
+* 자격 증명과 같은 민감 데이터를 YANG 명세에서 배제하고 앤서블의 동적 주입 방식으로 전환하여, 설계도의 범용성을 높이고 보안 사고를 원천 차단합니다.
 
-### Works 5. Holistic Cluster Integration: [hybrid-cloud.yang](./01-schema/hybrid-cloud.yang)
+### Step 5. Holistic Cluster Integration: [hybrid-cloud.yang](./01-schema/hybrid-cloud.yang)
 
 * 개별 리소스 모델을 통합하여 하이브리드 클러스터의 단일 진실 원천 (SSoT)을 구축합니다.
 
@@ -68,7 +70,7 @@
 
 ## Phase 2. Data Integrity & Schema Validation
 
-### Works 0. Environment Setup: libyang & yanglint (Rocky Linux 9)
+### Step 0. Environment Setup: libyang & yanglint (Rocky Linux 9)
 
 ```bash
 # libyang 설치
@@ -79,7 +81,7 @@ yanglint --version
 # yanglint 2.0.7
 ```
 
-### Works 1. Hierarchical Schema Visualization & Structural Audit
+### Step 1. Hierarchical Schema Visualization & Structural Audit
 
 * YANG 모델의 계층적 구조와 논리적 일관성을 검증하기 위해 `yanglint`의 트리 출력 기능을 활용합니다.
 
@@ -127,11 +129,10 @@ yanglint --version
             +--rw storage
             +--rw s3-endpoint         string
             +--rw redis-endpoint      string
-            +--rw secret-file-path    string
             +--rw cache-size          uint32
     ```
 
-### Works 2. Data Instance Modeling: Node-specific JSON Manifests
+### Step 2. Data Instance Modeling: Node-specific JSON Manifests
 
 * **[aws-t4g-node.json](./02-inventory/aws-t4g-node.json)**
 
@@ -139,7 +140,7 @@ yanglint --version
 
 * **[site-b-node.json](./02-inventory/site-b-node.json)**
 
-### Works 3. Schema Compliance Verification & Data Integrity Audit
+### Step 3. Schema Compliance Verification & Data Integrity Audit
 
 ```bash
 for f in 02-inventory/*.json; do 
@@ -154,7 +155,7 @@ YANG Lint Pass: 02-inventory/site-a-node.json
 YANG Lint Pass: 02-inventory/site-b-node.json
 ```
 
-### Works 4. Exception Handling & Constraint Enforcement Scenarios
+### Step 4. Exception Handling & Constraint Enforcement Scenarios
 
 JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시지를 제공하여 문제를 쉽게 파악할 수 있습니다.
 
@@ -178,13 +179,13 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 > 컴퓨트 노드와 완전히 격리된 독립형 스토리지 엔진을 구축합니다. S3 호환 API (MinIO)와 고성능 메타데이터 엔진 (Redis)을 추상화된 자원으로 제공하여 하이브리드 클러스터의 데이터 일관성을 보장합니다.
 
-### Works 1. Containerized Storage Backend Deployment
+### Step 1. Containerized Storage Backend Deployment
 
-* **[docker-compose.yml](./03-storage-provider/docker-compose.yml)** 을 활용하여 스토리지 백엔드를 코드화 했습니다.
+* **[docker-compose.yml](./03-storage-provider/docker-compose.yml)** 을 활용하여 스토리지 백엔드 구성을 코드화합니다.
 
-* Host OS 환경에 의존하지 않고, 컨테이너 기술을 통해 엔진의 배포와 버전 관리를 단순화했습니다.
+* Host OS 환경에 의존하지 않고, 컨테이너 기술을 통해 엔진의 배포와 버전 관리를 단순화합니다.
 
-### Works 2. Storage Provider Specs & Technical Highlights
+### Step 2. Storage Provider Specs & Technical Highlights
 
 | Component | Service | Port | Backend Storage |
 | --- | --- | --- | --- |
@@ -197,9 +198,11 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ---
 
-## Phase 4. Automated Node Bootstrapping
+## Phase 4. Automating Node Provisioning with Terraform & Shell Scripting
 
-### Works 0. Shared Public Key Authentication Setup
+### Step 0. Shared Public Key Authentication Setup
+
+> 모든 노드 (AWS & On-Premise)의 통합 관리를 위해 공통 SSH Key Pair를 생성합니다. 이는 Phase 5의 Ansible이 비밀번호 없이 전 노드에 진입할 수 있는 신뢰의 기반이 됩니다.
 
 ```bash
 # 로컬에서 SSH Key Pair 생성
@@ -209,76 +212,80 @@ ssh-keygen -t ed25519 -f ~/.ssh/hybrid-cloud_key -N ""
 cat ~/.ssh/hybrid-cloud_key.pub
 ```
 
-### Works 1. Data-Driven EC2 Provisioning & Auto-Configuration with Terraform
+### Step 1. Terraform for AWS Node Provisioning
 
-> Terraform과 JSON 인벤토리를 결합하여 인프라 선언과 설정을 완벽히 분리한 제로 터치 프로비저닝 환경을 구축하였습니다.
+> AWS 자원 생성에만 집중하며, `user_data` 스크립트를 완전히 배제하여 인프라 프로비저닝과 노드 부트스트래핑의 경계를 명확히 분리합니다. 이는 가장 순수한 형태의 IaC로서, 플랫폼에 종속되지 않는 하이브리드 클라우드 구축의 기반이 됩니다.
 
-#### 1. Inventory-Driven Resource Declaration
+#### 1. [`main.tf`](./04-provisioning/aws/main.tf)
 
-* 인프라의 명세를 Terraform 코드 ([main.tf](./04-bootstrap/terraform/main.tf))와 분리하여 별도의 JSON 파일로 관리합니다. 
+* AWS 리전 (`ap-northeast-2`)을 설정하고, SSH 공개 키 및 YANG 기반 JSON 인벤토리 파일의 경로를 변수로 관리하여 유연성을 확보합니다.
 
-* `jsondecode` 함수를 사용하여 외부 JSON 인벤토리를 실시간으로 파싱하고, Terraform `locals` 변수로 변환하여 리소스에 주입합니다. 
+* `jsondecode` 함수를 사용하여 주입된 JSON 인벤토리로부터 노드 이름, 인스턴스 유형, 디스크 크기, 공인 IP 필요 여부 등의 자원 명세를 동적으로 읽어옵니다.
 
-* 노드 이름 (`name`), 인스턴스 유형 (`instance-type`), EBS 볼륨 크기(`ebs-size`), 퍼블릭 IP 할당 여부(`public-ip-required`) 등 핵심 속성을 데이터 중심으로 제어합니다.
+* 프로비저닝 완료 후 Ansible이 즉시 접속할 수 있도록 생성된 인스턴스의 공인 IP를 출력합니다.
 
-#### 2. Terraform-Native Provisioning Logic
+#### 2. [`network.tf`](./04-provisioning/aws/network.tf)
 
-* AWS의 표준 리소스와 Terraform의 템플릿 기능을 활용하여 인스턴스의 생명주기를 관리합니다.
+* Ansible 접속을 위한 SSH (TCP 22) 포트와 하이브리드 메시 네트워크 구성을 위한 Tailscale (UDP 41641) 포트만을 정밀하게 개방합니다.
 
-* `aws_key_pair` 리소스를 통해 사전에 정의된 공개 키를 인스턴스에 자동으로 주입하여 초기 접근 권한을 확보합니다.
+* 패키지 업데이트 및 외부 서비스 연결을 위해 모든 아웃바운드 트래픽 (Egress)을 허용합니다.
 
-* `templatefile` 함수와 [`tailscale_setup.tftpl`](./04-bootstrap/terraform/tailscale_setup.tftpl)를 사용하여 쉘 스크립트와 Terraform 변수를 결합한 설정 템플릿을 구성하였습니다. 
+#### 3. [`compute.tf`](./04-provisioning/aws/compute.tf)
 
-#### 3. Post-Provisioning Auto-Configuration
+* JSON에서 추출한 `instance_type`과 `ebs_size` 등의 명세에 따라 EC2 인스턴스를 생성합니다. 
 
-* 인스턴스 생성 직후, `user_data`를 통해 OS 레벨의 초기 설정을 자동으로 수행합니다. 
+* 하이브리드 클라우드의 오버레이 네트워킹을 원활하게 지원하기 위해 인스턴스의 `source_dest_check` 옵션을 `false`로 설정합니다. 
 
-* 인벤토리에 정의된 노드 이름을 OS 호스트네임으로 즉시 반영합니다. 
+* 변수로 지정된 경로의 공개 키 파일을 읽어 (`file()` 함수 사용) 인스턴스에 주입함으로써, 별도의 비밀번호 없이 Ansible이 즉시 진입할 수 있는 통로를 확보합니다.
 
-* Tailscale 설치 및 자동 합류를 수행하여, 프로비저닝된 노드가 즉시 클러스터 네트워크에 통합될 수 있도록 합니다.
+### Step 2. Shell Scripting for On-Premise Access Bridge
 
-### Works 2. JSON-Driven On-Premise Bootstrapping with Custom Shell Scripts
+> 전용 API 등 별도의 프로비저닝 수단이 부재한 On-Premise 환경의 한계를 극복하기 위해, SSH 도구를 활용합니다. 이는 Ansible이 대상 노드에 진입하여 구성 관리를 수행하기 위한 사전 준비 단계입니다.
 
-> AWS의 완전 자동화 방식과 달리, 온프레미스 환경의 특수성 (비밀번호 인증 기반 초기 상태)을 고려하여 JSON Manifest와 쉘 스크립트 기반의 반자동화 브릿지를 구축하였습니다.
+#### 1. [`public_key.sh`](./04-provisioning/on-premise/public_key.sh)
 
-#### 1.JSON Manifest Injection
+* 리눅스 표준 유틸리티인 `ssh-copy-id`를 사용하여 로컬 머신의 공개 키를 원격 On-Premise 노드에 안전하게 복사합니다.
 
-> **TBD**
+* 대상 노드의 IP 주소, SSH 포트, 사용자 계정을 변수로 받아 다양한 On-Premise 환경 (Proxmox VM, Bare-metal 등)에 유연하게 대응합니다.
 
-#### 2. SSH Key Distribution & Disable Password Authentication
+* `ssh-copy-id` 고유의 기능을 통해 중복 키 등록을 방지하고, 원격지의 `.ssh` 디렉토리 및 `authorized_keys` 파일 권한을 보안 정책에 맞게 자동 조정합니다.
 
-> **TBD**
+#### 2. Orchestration-Ready Design
 
-#### 3. Tailscale Integration & Network Unification
+* 스크립트는 복잡한 노드 설정 기능을 배제하고 오직 SSH 신뢰 관계 구축이라는 단일 목적에만 집중합니다.
 
-> **TBD**
+* 개별 노드에 대한 수동 실행을 넘어, 외부 오케스트레이터 (Make 또는 Python)가 여러 JSON 인벤토리를 순회하며 본 스크립트를 루프 형태로 호출할 수 있도록 설계되었습니다.
 
-### Works 3. Custom Docker Command for Virtualized Node Simulation
+### Step 3. Unified Orchestration with Python
 
-* site-b-node의 경우, 호스트 시스템에 직접 접근이 불가능하기 때문에, Docker 컨테이너를 활용하여 가상화된 노드 시뮬레이터를 구축합니다.
+> 하이브리드 클라우드 구축의 전 과정을 조율하는 중앙 통제 레이어입니다. 플랫폼마다 파편화된 프로비저닝 도구들을 단일 인터페이스로 통합하여, 설계와 실제 인프라 사이의 간극을 자동화로 메웁니다.
 
-    ```bash
-    export CONTAINER_NAME=hybrid-cloud-node-simulator
-    docker rm -f $CONTAINER_NAME 2>/dev/null
-    docker run -d \
-        -p 30022:22 \
-        --name $CONTAINER_NAME \
-        --hostname $CONTAINER_NAME \
-        --privileged \
-        --device /dev/net/tun:/dev/net/tun \
-        --cgroupns host \
-        -v /sys/fs/cgroup:/sys/fs/cgroup:rw \
-        jrei/systemd-debian
-    ```
+#### 1. [provisioner.py](./04-provisioning/provisioner.py)
+
+* Data-Driven Execution
+
+    * `02-inventory/` 폴더 내의 모든 JSON 매니페스트를 순회하며 platform 타입을 동적으로 분석합니다.
+
+    * **`aws`** 타입일 경우 Terraform을, **`on-premise`** 타입일 경우 전용 Shell 스크립트를 선택적으로 호출하여 각 환경에 최적화된 프로비저닝을 수행합니다.
+
+* Path Independence
+
+    * `os.path.abspath(__file__)`를 활용하여 스크립트의 절대 경로를 계산합니다.
+
+    * 이로 인해 프로젝트 루트나 하위 디렉토리 등 어느 위치에서 실행하더라도 인벤토리 파일과 Terraform 코드를 정확하게 탐색할 수 있는 견고함을 갖췄습니다.
+
+* Hybrid Data Model Support
+
+    * YANG 모델의 중첩 구조와 사용자가 작성한 평면 구조를 동시에 지원하도록 설계되었습니다.
+
+    * `.get()` 메서드를 활용한 방어적 코딩을 통해 데이터 누락 시에도 기본값을 할당하거나 안전하게 실행을 중단하여 인프라 오염을 방지합니다.
+
+#### 2. Orchestration Flow
+
+* **Inventory Parsing:** `02-inventory/`의 JSON 데이터를 로드하여 노드별 명세를 파악합니다.
+
+* **Tool Selection:** Platform 타입 (`aws` vs `on-premise`)에 따라 적절한 하위 모듈을 트리거합니다.
+
+* **Credential Injection:** 공통 SSH 공개 키를 AWS 키 페어로 등록하거나, On-Premise 노드의 `authorized_keys`에 주입합니다.
 
 ---
-
-## Phase 5. Provisioning Automation via Ansible
-
-> **TBD**
-
----
-
-## Phase 6. Hybrid Cluster Orchestration & Realization
-
-> **TBD**

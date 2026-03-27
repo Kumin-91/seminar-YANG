@@ -1,7 +1,7 @@
 # SSH 키 페어 등록
 resource "aws_key_pair" "hybrid_cloud" {
     key_name   = "hybrid-cloud-key-${local.node_name}"
-    public_key = var.PUBLIC_KEY
+    public_key = file(var.public_key_path)
 }
 
 # EC2 인스턴스 (t4g.medium)
@@ -19,12 +19,6 @@ resource "aws_instance" "node" {
 
     # 인스턴스가 패킷의 최종 목적지가 아니더라도 통과시킬 수 있게 합니다.
     source_dest_check = false
-
-    # user_data를 외부 파일로 분리하여 호출합니다. 
-    user_data = templatefile("tailscale_setup.tftpl", {
-        node_name             = local.node_name
-        tailscale_auth_key    = var.TAILSCALE_AUTH_KEY
-    })
 
     tags = {
         Name = local.node_name

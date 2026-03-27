@@ -16,14 +16,13 @@
           "memory": 4
         },
         "network": {
-          "ssh-user": "root",
+          "ssh-user": "sttb",
           "ssh-port": 30022,
           "bootstrap-ip": "100.100.1.253"
         },
         "storage": {
           "s3-endpoint": "s3.example.com",
           "redis-endpoint": "100.100.1.254:4279",
-          "secret-file-path": "storage-client.env",
           "cache-size": 20
         }
       }

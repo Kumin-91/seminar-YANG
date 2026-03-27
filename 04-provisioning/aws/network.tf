@@ -3,6 +3,14 @@ resource "aws_security_group" "hybrid_cloud_sg" {
     name        = "hybrid-cloud-sg-${local.node_name}"
     description = "Allow SSH and Tailscale traffic" 
 
+    # SSH Access
+    ingress {
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+
     # Tailscale
     ingress {
       from_port   = 41641

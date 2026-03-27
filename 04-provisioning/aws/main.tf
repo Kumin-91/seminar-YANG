@@ -3,15 +3,10 @@ provider "aws" {
     region = "ap-northeast-2"
 }
 
-variable "PUBLIC_KEY" {
+variable "public_key_path" {
     type        = string
-    description = "SSH Public Key for EC2 instance access"
-}
-
-variable "TAILSCALE_AUTH_KEY" {
-    type        = string
-    sensitive   = true
-    description = "Tailscale Authentication Key for node connectivity"
+    default     = "~/.ssh/hybrid-cloud_key.pub"
+    description = "Path to the SSH public key file"
 }
 
 variable "manifest_path" {
@@ -24,10 +19,10 @@ variable "manifest_path" {
 locals {
     manifest = jsondecode(file(var.manifest_path))["hybrid-cloud:cluster"]["node"][0]
 
-    node_name     = local.manifest.name
-    instance_type = local.manifest.compute.instance-type
-    ebs_size      = local.manifest.compute.ebs-size
-    associate_ip  = local.manifest.network.public-ip-required
+    node_name     = local.manifest["name"]
+    instance_type = local.manifest.compute["instance-type"]
+    ebs_size      = local.manifest.compute["ebs-size"]
+    associate_ip  = local.manifest.network["public-ip-required"]
 }
 
 output "public_ip" {

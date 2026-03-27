@@ -20,14 +20,13 @@
           "memory": 8
         },
         "network": {
-          "ssh-user": "debian",
+          "ssh-user": "sttb",
           "ssh-port": 22,
           "bootstrap-ip": "192.168.1.202"
         },
         "storage": {
           "s3-endpoint": "s3.example.com",
           "redis-endpoint": "100.100.1.254:4279",
-          "secret-file-path": "storage-client.env",
           "cache-size": 30
         }
       }
