@@ -7,33 +7,44 @@ module res-compute {
 
     grouping resource-compute {
         container compute {
-            description "논리적 연산 자원 정의 그룹입니다.";
-
+            leaf platform {
+                type ct:node-platform;
+                mandatory true;
+            }
             leaf arch {
                 type ct:cpu-arch;
                 mandatory true;
-                description "CPU 아키텍처 유형 (x86_64 또는 arm64)";
             }
-
-            leaf vcpu {
-                type uint8 {
-                    range "1..8";
+            choice platform-spec {
+                mandatory true;
+                case aws {
+                    when "platform = 'aws'";
+                    leaf instance-type {
+                        type ct:aws-instance-type;
+                        mandatory true;
+                        description "AWS 인스턴스 유형 (예: t4g.medium)";
+                    }
+                    leaf ebs-size {
+                        type uint16;
+                        units "GB";
+                        default 20;
+                        description "AWS EBS 볼륨 크기 (GB 단위)";
+                    }
                 }
-                description "가상 CPU 코어 수 (1-8)";
-            }
-
-            leaf memory {
-                type uint8 {
-                    range "1..16";
+                case on-premise {
+                    when "platform = 'on-premise'";
+                    leaf vcpu {
+                        type uint8 { range "1..8"; }
+                        mandatory true;
+                        description "가상 CPU 코어 수";
+                    }
+                    leaf memory {
+                        type uint8 { range "1..16"; }
+                        units "GB";
+                        mandatory true;
+                        description "메모리 크기 (GB 단위)";
+                    }
                 }
-                units "GB";
-                description "할당된 메모리 용량 (GB 단위, 1-16)";
-            }
-
-            leaf burstable {
-                type boolean;
-                default "false";
-                description "버스티블 인스턴스 여부 (true: 버스티블, false: 일반)";
             }
         }
     }

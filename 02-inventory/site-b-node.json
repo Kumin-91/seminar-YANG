@@ -3,28 +3,29 @@
     "node": [
       {
         "name": "site-b-node",
-        "compute": {
-          "arch": "x86_64",
-          "vcpu": 2,
-          "memory": 4,
-          "burstable": false
-        },
-        "network": {
-          "tailscale-ip": "100.100.2.202",
-          "zone": "on-prem"
-        },
-        "storage": {
-            "s3-endpoint": "s3.example.com",
-            "redis-endpoint": "100.100.1.254:4279",
-            "secret-file-path": "storage.env",
-            "cache-size": 20
-        },
         "role-assignment": [
           {
             "role": "agent",
             "priority": "secondary"
           }
-        ]
+        ],
+        "compute": {
+          "platform": "on-premise",
+          "arch": "x86_64",
+          "vcpu": 2,
+          "memory": 4
+        },
+        "network": {
+          "ssh-user": "root",
+          "ssh-port": 30022,
+          "bootstrap-ip": "100.100.1.253"
+        },
+        "storage": {
+          "s3-endpoint": "s3.example.com",
+          "redis-endpoint": "100.100.1.254:4279",
+          "secret-file-path": "storage-client.env",
+          "cache-size": 20
+        }
       }
     ]
   }

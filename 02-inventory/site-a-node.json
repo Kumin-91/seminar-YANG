@@ -3,22 +3,6 @@
     "node": [
       {
         "name": "site-a-node",
-        "compute": {
-          "arch": "x86_64",
-          "vcpu": 4,
-          "memory": 8,
-          "burstable": false
-        },
-        "network": {
-          "tailscale-ip": "100.100.2.201",
-          "zone": "on-prem"
-        },
-        "storage": {
-            "s3-endpoint": "s3.example.com",
-            "redis-endpoint": "100.100.1.254:4279",
-            "secret-file-path": "storage.env",
-            "cache-size": 30
-        },
         "role-assignment": [
           {
             "role": "server",
@@ -28,7 +12,24 @@
             "role": "agent",
             "priority": "primary"
           }
-        ]
+        ],
+        "compute": {
+          "platform": "on-premise",
+          "arch": "x86_64",
+          "vcpu": 4,
+          "memory": 8
+        },
+        "network": {
+          "ssh-user": "debian",
+          "ssh-port": 22,
+          "bootstrap-ip": "192.168.1.202"
+        },
+        "storage": {
+          "s3-endpoint": "s3.example.com",
+          "redis-endpoint": "100.100.1.254:4279",
+          "secret-file-path": "storage-client.env",
+          "cache-size": 30
+        }
       }
     ]
   }

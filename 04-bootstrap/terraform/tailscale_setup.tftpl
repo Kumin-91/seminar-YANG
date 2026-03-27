@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# 호스트네임 설정
+hostnamectl set-hostname "${node_name}"
+
+# Tailscale 설치 및 연결
+curl -fsSL https://tailscale.com/install.sh | sh
+tailscale up --authkey "${tailscale_auth_key}" --hostname "${node_name}" --accept-dns=false
+
+echo "✅ AWS Node ${node_name} is fully initialized."
