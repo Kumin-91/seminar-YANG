@@ -3,32 +3,42 @@ module res-network {
     namespace "urn:csmin:params:xml:ns:yang:res-network";
     prefix rn;
 
-    import ietf-inet-types {
-        prefix inet;
-    }
+    import common-types { prefix ct; }
+    import ietf-inet-types { prefix inet; }
 
     grouping resource-network {
         container network {
-            description "논리적 네트워크 자원 정의 그룹입니다.";
-
-            leaf tailscale-ip {
-                type inet:ipv4-address {
-                    pattern '100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.'
-                          + '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.'
-                          + '(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)';
-                }
+            leaf ssh-user {
+                type string;
                 mandatory true;
-                description "Tailscale 네트워크에서 할당된 IP 주소입니다. (100.64.0.0/10)";
+                description "SSH 접속에 사용할 사용자 이름";
             }
-
-            leaf zone {
-                type enumeration {
-                    enum cloud {
-                        description "클라우드 네트워크 영역 (예: AWS, Azure)";
+            leaf ssh-port {
+                type inet:port-number;
+                default 22;
+                description "SSH 접속에 사용할 포트 번호";
+            }
+            choice bootstrap-strategy {
+                mandatory true;
+                case aws-strategy {
+                    when "../compute/platform = 'aws'";
+                    leaf public-ip-required {
+                        type boolean;
+                        default true;
+                        description "AWS 노드 부트스트랩 시 퍼블릭 IP 할당 여부";
                     }
-
-                    enum on-prem {
-                        description "온프레미스 네트워크 영역 (예: Site-A, Site-B)";
+                    leaf use-eip {
+                        type boolean;
+                        default false;
+                        description "AWS 노드 부트스트랩 시 고정 IP 사용 여부";
+                    }
+                }
+                case on-premise-strategy {
+                    when "../compute/platform = 'on-premise'";
+                    leaf bootstrap-ip {
+                        type inet:ip-address;
+                        mandatory true;
+                        description "온프레미스 노드 부트스트랩에 사용할 IP 주소";
                     }
                 }
             }

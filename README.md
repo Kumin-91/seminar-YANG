@@ -6,55 +6,13 @@
 
 [Phase 2. Data Integrity & Schema Validation](#phase-2-data-integrity--schema-validation)
 
-[Phase 3. Bootstrap & Overlay Networking: Tailscale-based Connectivity](#phase-3-bootstrap--overlay-networking-tailscale-based-connectivity)
+[Phase 3. Storage Abstraction: JuiceFS Infrastructure Setup](#phase-3-storage-abstraction-juicefs-infrastructure-setup)
 
-[Phase 4. Storage Abstraction: JuiceFS Infrastructure Setup](#phase-4-storage-abstraction-juicefs-infrastructure-setup)
-
-[Phase 5. Provisioning Automation via Ansible](#phase-5-provisioning-automation-via-ansible)
-
-[Phase 6. Hybrid Cluster Orchestration & Realization](#phase-6-hybrid-cluster-orchestration--realization)
-
-## Project Overview
-
-```plain text
-.
-├── 01-schema/                   # [Rule] YANG 기반 인프라 추상화 모델
-│   ├── common-types.yang        # K3s 역할 및 아키텍처 공통 타입 정의
-│   ├── hybrid-cloud.yang        # 클러스터 통합 관리 최상위 모델
-│   ├── res-compute.yang         # vCPU/Memory 연산 자원 모델
-│   ├── res-network.yang         # Tailscale 기반 네트워크 모델
-│   └── res-storage.yang         # JuiceFS 스토리지 연결 모델
-│
-├── 02-inventory/                # [Manifest] 노드별 자원 할당 명세
-│   ├── aws-t4g-node.json        # AWS 노드 선언문
-│   ├── site-a-node.json         # Site-A 노드 선언문
-│   ├── site-b-node.json         # Site-B 노드 선언문
-│   ├── storage-client.env       # JuiceFS 클라이언트 마운트용 비밀번호
-│   └── storage-client.example
-│
-├── 03-bootstrap/                # [Provisioning] 인프라 생존 및 초기화
-│   ├── cloud-aws/               # Terraform 기반 AWS 인프라 구축
-│   │   ├── aws-t4g-node.tf      # AWS EC2 리소스 정의
-│   │   ├── terraform.tfvars     # 클라우드 프로비저닝용 인증 정보
-│   │   └── terraform.tfvars.example
-│   └── onprem-init/             # 온프레미스 노드 OS 환경 초기화
-│       ├── node-bootstrap.env   # Tailscale 및 SSH 초기 키
-│       ├── node-bootstrap.env.example
-│       ├── site-a-node-init.sh  # Site-A VM 인스턴스 초기화
-│       └── site-b-node-init.sh  # Site-B Docker 시스템 컨테이너 구축
-│
-├── 04-storage-provider/         # [Backend] JuiceFS 데이터 엔진
-│   ├── docker-compose.yml       # Redis (Metadata) 및 MinIO (Object) 정의
-│   ├── storage-provider.env     # 백엔드 엔진 전용 자격 증명
-│   └── storage-provider.env.example
-│
-├── .gitignore                   # 모든 *.env 및 *.tfvars 유출 방지
-└── README.md                    # 프로젝트 아키텍처 및 로드맵 가이드
-```
+[Phase 4. Automating Node Provisioning with Terraform & Shell Scripting](#phase-4-automating-node-provisioning-with-terraform--shell-scripting)
 
 ## Phase 0. Physical Inventory & Resource Specification
 
-### Works 1. Strategic Role Allocation & Infrastructure Hierarchy
+### Step 1. Strategic Role Allocation & Infrastructure Hierarchy
 
 | Location | Gateway/Ingress | Control Plane | Worker Node |
 | --- | --- | --- | --- |
@@ -62,65 +20,57 @@
 | **Site A** | Secondary| Secondary | Primary |
 | **Site B** | ❌ | ❌ | Secondary |
 
-### Works 2. Hardware Inventory & Compute/Storage Quotas
+### Step 2. Hardware Inventory & Compute/Storage Quotas
 
-| Location | Network | Compute | Arch | Burstable | Cache Quota |
-| --- | --- | --- | --- | --- | --- |
-| **AWS** | 100.100.2.101 | 2 vCPU / 4GB RAM (t4g.medium) | arm64 | Yes | 5GB EBS |
-| **Site A** | 100.100.2.201 | 4 vCPU / 8GB RAM (Mid-Range CPU) | x86_64 | No | 30GB NVME |
-| **Site B** | 100.100.2.202 | 2 vCPU / 4GB RAM (Low-Power CPU) | x86_64 | No | 20GB SSD |
+| Location | IP | Port | Compute | Arch | Burstable | Cache Quota |
+| --- | --- | --- | --- | --- | --- | --- |
+| **AWS** | Dynamic | 22 | t4g.medium | arm64 | Yes | 5GB EBS |
+| **Site A** | 192.168.1.202 | 22 | 4 vCPU / 8GB RAM | x86_64 | No | 30GB NVME |
+| **Site B** | 100.100.1.253 | 30022 | 2 vCPU / 4GB RAM | x86_64 | No | 20GB SSD |
 
-### Works 3. Network Topology & Latency Analysis
-
-* Site A, Site B 서버는 서로 다른 네트워크에 위치해 있지만, 물리적으로 가까운 위치에 있으며 동일한 네트워크 도메인 내에 위치해 있습니다.
-
-    * 같은 Metropolitan Area Network에 위치해 있어, Tailscale 기준 < 5ms의 Latency를 기대할 수 있습니다.
-
-    * 매우 낮은 Latency를 가지고 있어 JuiceFS / K3s 클러스터 구축에 적합합니다.
+> AWS의 IP 주소는 Terraform 프로비저닝 후 동적으로 할당됩니다.
 
 ---
 
 ## Phase 1. Logical Abstraction via YANG Modeling
 
-### Works 1. Base Type Definitions: [common-types.yang](./01-schema/common-types.yang)
+### Step 1. Base Type Definitions: [common-types.yang](./01-schema/common-types.yang)
 
-* K3s 노드 역할과 우선순위를 정의하는 공통 유형 모듈입니다.
+* Platform (AWS/On-Premise), Arch, K3s Role 등에 대한 표준 데이터 타입을 정의합니다.
 
-### Works 2. Compute Resource Abstraction: [res-compute.yang](./01-schema/res-compute.yang)
+* AWS 인스턴스 타입은 정규표현식을 통해 medium 이하 규격으로 엄격히 제한됩니다.
 
-* vCPU, Memory, Burstable 여부 등 컴퓨팅 자원 관련 속성을 정의하는 모듈입니다.
+### Step 2. Compute Resource Abstraction: [res-compute.yang](./01-schema/res-compute.yang)
 
-* 엄격한 검증을 적용하여 각 노드의 컴퓨팅 자원 사양이 허용된 범위 내에 있도록 합니다.
+* 플랫폼별 연산 자원 명세를 담당하며, Platform 값에 따라 입력 항목을 동적으로 강제합니다.
 
-### Works 3. Network Perimeter & Policy Modeling: [res-network.yang](./01-schema/res-network.yang)
+* AWS: instance-type 기반의 규격화된 자원 할당.
 
-* 엄격하게 Tailscale IP 주소만 허용하도록 구성이 된 네트워크 자원 모델입니다.
+* On-Premise: vCPU 및 Memory 범위를 직접 지정하여 하드웨어 제약 내에서 자원을 선언합니다.
 
-* Cloud / On-Prem 자원을 구분할 수 있도록 구성되어 있습니다.
+### Step 3. Network Perimeter & Policy Modeling: [res-network.yang](./01-schema/res-network.yang)
 
-    * AWS: zone "cloud"
+* 초기 프로비저닝 (Underlay)을 위한 접속 계정과 포트 정보를 정의합니다.
 
-    * Site A, Site B: zone "on-prem"
+* AWS의 Late Binding 전략과 On-Premise의 Early Binding 전략을 구분하여 모델링합니다.
 
-### Works 4. Distributed Storage Logic Modeling: [res-storage.yang](./01-schema/res-storage.yang)
+### Step 4. Distributed Storage Logic Modeling: [res-storage.yang](./01-schema/res-storage.yang)
 
-* 컴퓨트 노드가 외부 스토리지 엔진 (MinIO, Redis)에 접근하기 위한 논리적 엔드포인트를 정의합니다.
+* 분산 스토리지 (JuiceFS) 환경 구성을 위한 엔드포인트와 캐시 정책을 정의합니다.
 
-* 민감한 자격 증명을 직접 모델링하지 않고, secret-file-path 리프를 통해 실질적인 비밀번호가 담긴 `storage-client.env` 파일의 경로만 선언하도록 설계했습니다.
+* 자격 증명과 같은 민감 데이터를 YANG 명세에서 배제하고 앤서블의 동적 주입 방식으로 전환하여, 설계도의 범용성을 높이고 보안 사고를 원천 차단합니다.
 
-* 캐시 할당량을 GB 단위로 명확히 정의하여, 각 노드의 스토리지 자원 사양이 허용된 범위 내에 있도록 합니다.
+### Step 5. Holistic Cluster Integration: [hybrid-cloud.yang](./01-schema/hybrid-cloud.yang)
 
-### Works 5. Holistic Cluster Integration: [hybrid-cloud.yang](./01-schema/hybrid-cloud.yang)
+* 개별 리소스 모델을 통합하여 하이브리드 클러스터의 단일 진실 원천 (SSoT)을 구축합니다.
 
-* 클러스터 전체를 포괄하는 최상위 모델로, 각 노드의 역할과 자원 사양을 통합적으로 표현합니다.
-
-* 각 리소스 모듈을 컴포지션 구조로 통합하여 단일 엔드포인트를 제공합니다.
+* 각 노드의 기술적 역할뿐만 아니라 클러스터 내의 전략적 우선순위를 함께 관리합니다.
 
 ---
 
 ## Phase 2. Data Integrity & Schema Validation
 
-### Works 0. Environment Setup: libyang & yanglint (Rocky Linux 9)
+### Step 0. Environment Setup: libyang & yanglint (Rocky Linux 9)
 
 ```bash
 # libyang 설치
@@ -131,205 +81,111 @@ yanglint --version
 # yanglint 2.0.7
 ```
 
-### Works 1. Hierarchical Schema Visualization & Structural Audit
+### Step 1. Hierarchical Schema Visualization & Structural Audit
+
+* YANG 모델의 계층적 구조와 논리적 일관성을 검증하기 위해 `yanglint`의 트리 출력 기능을 활용합니다.
+
+    ```bash
+    yanglint -f tree ./01-schema/hybrid-cloud.yang
+    ```
+
+* YANG 모델에 에러가 있는 경우, `yanglint`가 상세한 오류 메시지를 제공하여 문제를 쉽게 파악할 수 있습니다.
+
+    ```plain text
+    libyang err : Invalid keyword ";" as a child of "leaf". (Line number 37.)
+    libyang err : Importing "res-compute" module failed.
+    YANGLINT[E]: Processing schema module from ./01-schema/hybrid-cloud.yang failed.
+    ```
+
+* YANG 모델의 계층적 구조는 다음과 같이 시각적으로 표현됩니다.
+
+    ```plain text
+    module: hybrid-cloud
+    +--rw cluster
+        +--rw node* [name]
+            +--rw name               string
+            +--rw role-assignment* [role]
+            |  +--rw role        ct:k3s-role
+            |  +--rw priority    ct:node-role
+            +--rw compute
+            |  +--rw platform           ct:node-platform
+            |  +--rw arch               ct:cpu-arch
+            |  +--rw (platform-spec)
+            |     +--:(aws)
+            |     |  +--rw instance-type    ct:aws-instance-type
+            |     |  +--rw ebs-size?        uint16
+            |     +--:(on-premise)
+            |        +--rw vcpu      uint8
+            |        +--rw memory    uint8
+            +--rw network
+            |  +--rw ssh-user                string
+            |  +--rw ssh-port?               inet:port-number
+            |  +--rw (bootstrap-strategy)
+            |     +--:(aws-strategy)
+            |     |  +--rw public-ip-required?   boolean
+            |     |  +--rw use-eip?              boolean
+            |     +--:(on-premise-strategy)
+            |        +--rw bootstrap-ip    inet:ip-address
+            +--rw storage
+            +--rw s3-endpoint         string
+            +--rw redis-endpoint      string
+            +--rw cache-size          uint32
+    ```
+
+### Step 2. Data Instance Modeling: Node-specific JSON Manifests
+
+* **[aws-t4g-node.json](./02-inventory/aws-t4g-node.json)**
+
+* **[site-a-node.json](./02-inventory/site-a-node.json)**
+
+* **[site-b-node.json](./02-inventory/site-b-node.json)**
+
+### Step 3. Schema Compliance Verification & Data Integrity Audit
 
 ```bash
-yanglint -f tree ./01-schema/hybrid-cloud.yang
+for f in 02-inventory/*.json; do 
+    yanglint -p 01-schema -t data 01-schema/hybrid-cloud.yang "$f" && echo "YANG Lint Pass: $f"
+done
 ```
-
-```plain text
-module: hybrid-cloud
-  +--rw cluster
-     +--rw node* [name]
-        +--rw name               string
-        +--rw role-assignment* [role]
-        |  +--rw role        ct:k3s-role
-        |  +--rw priority    ct:node-role
-        +--rw compute
-        |  +--rw arch         ct:cpu-arch
-        |  +--rw vcpu?        uint8
-        |  +--rw memory?      uint8
-        |  +--rw burstable?   boolean
-        +--rw network
-        |  +--rw tailscale-ip    inet:ipv4-address
-        |  +--rw zone?           enumeration
-        +--rw storage
-           +--rw s3-endpoint       string
-           +--rw redis-endpoint    string
-           +--rw secret-file-path  string
-           +--rw cache-size        uint32
-```
-
-### Works 2. Data Instance Modeling: Node-specific JSON Manifests
-
-**[Phase 0. Physical Inventory & Resource Specification](#phase-0-physical-inventory--resource-specification)** 에서 정의한 리소스 사양에 따라, 각 노드에 대한 JSON 데이터를 작성하였습니다.
-
-* **[aws-t4g-node Example](./02-inventory/aws-t4g-node.json)**
-
-* **[site-a-node Example](./02-inventory/site-a-node.json)**
-
-* **[site-b-node Example](./02-inventory/site-b-node.json)**
-
-### Works 3. Schema Compliance Verification & Data Integrity Audit
 
 ```bash
-yanglint -p 01-schema -t data 01-schema/hybrid-cloud.yang 02-inventory/aws-t4g-node.json
-yanglint -p 01-schema -t data 01-schema/hybrid-cloud.yang 02-inventory/site-a-node.json
-yanglint -p 01-schema -t data 01-schema/hybrid-cloud.yang 02-inventory/site-b-node.json
+# Expected Output
+YANG Lint Pass: 02-inventory/aws-t4g-node.json
+YANG Lint Pass: 02-inventory/site-a-node.json
+YANG Lint Pass: 02-inventory/site-b-node.json
 ```
 
-### Works 4. Exception Handling & Constraint Enforcement Scenarios
+### Step 4. Exception Handling & Constraint Enforcement Scenarios
 
 JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시지를 제공하여 문제를 쉽게 파악할 수 있습니다.
 
-* Tailscale IP 주소가 패턴에 맞지 않는 경우
+* 예시: `instance-type`이 `t4g.medium`을 초과하는 경우
 
     ```plain text
-    libyang err : Unsatisfied pattern - "100.10.1.201" does not conform to "100\.(6[4-9]|[7-9][0-9]|1[0-1][0-9]|12[0-7])\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)". (Schema location /hybrid-cloud:cluster/node/network/tailscale-ip, data location /hybrid-cloud:network, line number 22.)
+    libyang err : Unsatisfied pattern - "t4g.large" does not conform to "[tcrm][1-8][a-z]*\.(nano|micro|small|medium)". (Schema location /hybrid-cloud:cluster/node/compute/platform-spec/aws/instance-type, data location /hybrid-cloud:compute, line number 19.)
     YANGLINT[E]: Failed to parse input data file "02-inventory/aws-t4g-node.json".
     ```
 
-* 필드의 값이 허용된 범위를 벗어난 경우
+* 예시: On-Premise 노드에 `public-ip-required`가 `true`로 설정된 경우
 
     ```plain text
-    libyang err : Unsatisfied range - value "16" is out of the allowed range. (Schema location /hybrid-cloud:cluster/node/compute/vcpu, data location /hybrid-cloud:compute, line number 13.)
-    YANGLINT[E]: Failed to parse input data file "02-inventory/site-b-node.json".
+    libyang err : Data for both cases "aws-strategy" and "on-premise-strategy" exist. (Schema location /hybrid-cloud:cluster/node/network/bootstrap-strategy, data location /hybrid-cloud:network, line number 27.)
+    YANGLINT[E]: Failed to parse input data file "02-inventory/site-a-node.json".
     ```
 
 ---
 
-## Phase 3. Bootstrap & Overlay Networking: Tailscale-based Connectivity
-
-### Works 0. Shared Public Key Authentication Setup
-
-```bash
-# 로컬에서 SSH Key Pair 생성
-ssh-keygen -t ed25519 -f ~/.ssh/hybrid-cloud_key -N ""
-
-# 생성된 공개 키 확인
-cat ~/.ssh/hybrid-cloud_key.pub
-```
-
-### Works 1. EC2 Instance Provisioning: [aws-t4g-node.tf](./03-bootstrap/cloud-aws/aws-t4g-node.tf)
-
-> Terraform으로 프로비저닝 및 초기 설정이 완료된 AWS EC2 인스턴스 환경
-
-```Terraform
-# 초기화 자동화 (User Data)
-user_data = <<-EOF
-            #!/bin/bash
-            set -xe
-            exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
-            hostnamectl set-hostname aws-t4g-node
-            dnf update -y
-            curl -fsSL https://tailscale.com/install.sh | sh
-            tailscale up --authkey ${var.tailscale_auth_key} --hostname aws-t4g-node --accept-dns=false --accept-routes=false
-            EOF
-```
-
-* Hostname 설정, Tailscale 설치 및 연결을 포함한 초기화 스크립트를 User Data로 자동화하여, 인스턴스가 시작될 때 필요한 설정이 자동으로 적용되도록 했습니다.
-
-### Works 2. On-Prem VM Setup: [site-a-node-init.sh](./03-bootstrap/onprem-init/site-a-node-init.sh)
-
-> KVM Hypervisor 가반의 VM 환경
-
-```bash
-# 호스트 이름 변경
-sudo hostnamectl set-hostname $HOST_NAME
-
-# OpenSSH Server 설치 및 서비스 시작
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y openssh-server
-sudo systemctl enable --now ssh
-
-# Public Key 등록
-mkdir -p ~/.ssh
-chmod 700 ~/.ssh
-echo "<PUBLIC_KEY>" >> ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/authorized_keys
-
-# Tailscale 설치
-curl -fsSL https://tailscale.com/install.sh | sh
-
-# Tailscale 연결
-sudo tailscale up --authkey $TAILSCALE_AUTH_KEY --hostname $HOST_NAME --accept-dns=false --accept-routes=false
-```
-
-### Works 3. On-Prem Container Setup: [site-b-node-init.sh](./03-bootstrap/onprem-init/site-b-node-init.sh)
-
-> Docker 기반 시스템 컨테이너를 활용한 VM 런타임 에뮬레이션
-
-```bash
-# Debian 13 Container 생성
-docker run -d --name $CONTAINER_NAME --hostname $CONTAINER_NAME \
-    --privileged --device /dev/net/tun:/dev/net/tun \
-    -v /sys/fs/cgroup:/sys/fs/cgroup:rw --cgroupns host \
-    jrei/systemd-debian
-
-# 컨테이너 내부 환경 구축 - 필요 패키지 설치, SSH 접속 설정
-docker exec -it $CONTAINER_NAME bash -c "
-    apt update && apt upgrade -y && apt install -y openssh-server sudo curl locales && 
-    sed -i '/en_US.UTF-8 UTF-8/s/^# //g' /etc/locale.gen && locale-gen &&
-    rm -f /etc/nologin && mkdir -p /run/sshd &&
-    sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && 
-    systemctl enable --now ssh
-"
-
-# Public Key 등록
-docker exec -it $CONTAINER_NAME bash -c "
-    mkdir -p ~/.ssh && chmod 700 ~/.ssh && 
-    echo '<PUBLIC_KEY>' >> ~/.ssh/authorized_keys && 
-    chmod 600 ~/.ssh/authorized_keys
-"
-
-# Tailscale 설치 및 연결
-docker exec -it $CONTAINER_NAME bash -c "
-    curl -fsSL https://tailscale.com/install.sh | sh &&
-    sudo systemctl enable --now tailscaled &&
-    tailscale up --authkey $TAILSCALE_AUTH_KEY --hostname $CONTAINER_NAME --accept-dns=false --accept-routes=false
-"
-```
-
-### Works 4. IP Configuration & Management Laptop Configuration
-
-#### 1. Tailscale Admin Console에서 IP 주소 할당
-
-* aws-t4g-node: `100.100.2.101`
-
-* site-a-node: `100.100.2.201`
-
-* site-b-node: `100.100.2.202`
-
-#### 2. `~/.ssh/config`
-
-```ini
-Host aws-t4g-node
-    HostName 100.100.2.101
-    User ec2-user
-    IdentityFile ~/.ssh/hybrid-cloud_key
-
-Host site-a-node
-    HostName 100.100.2.201
-    User debian
-    IdentityFile ~/.ssh/hybrid-cloud_key
-
-Host site-b-node
-    HostName 100.100.2.202
-    User root
-    IdentityFile ~/.ssh/hybrid-cloud_key
-```
-
-## Phase 4. Storage Abstraction: JuiceFS Infrastructure Setup
+## Phase 3. Storage Abstraction: JuiceFS Infrastructure Setup
 
 > 컴퓨트 노드와 완전히 격리된 독립형 스토리지 엔진을 구축합니다. S3 호환 API (MinIO)와 고성능 메타데이터 엔진 (Redis)을 추상화된 자원으로 제공하여 하이브리드 클러스터의 데이터 일관성을 보장합니다.
 
-### Works 1. Containerized Storage Backend Deployment
+### Step 1. Containerized Storage Backend Deployment
 
-* **[docker-compose.yml](./04-storage-provider/docker-compose.yml)** 을 활용하여 스토리지 백엔드를 코드화 했습니다.
+* **[docker-compose.yml](./03-storage-provider/docker-compose.yml)** 을 활용하여 스토리지 백엔드 구성을 코드화합니다.
 
-* Host OS의 환경에 의존하지 않고, 컨테이너 기술을 통해 엔진의 배포와 버전 관리를 단순화했습니다.
+* Host OS 환경에 의존하지 않고, 컨테이너 기술을 통해 엔진의 배포와 버전 관리를 단순화합니다.
 
-### Works 2. Storage Provider Specs & Technical Highlights
+### Step 2. Storage Provider Specs & Technical Highlights
 
 | Component | Service | Port | Backend Storage |
 | --- | --- | --- | --- |
@@ -342,12 +198,94 @@ Host site-b-node
 
 ---
 
-## Phase 5. Provisioning Automation via Ansible
+## Phase 4. Automating Node Provisioning with Terraform & Shell Scripting
 
-> **TBD**
+### Step 0. Shared Public Key Authentication Setup
+
+> 모든 노드 (AWS & On-Premise)의 통합 관리를 위해 공통 SSH Key Pair를 생성합니다. 이는 Phase 5의 Ansible이 비밀번호 없이 전 노드에 진입할 수 있는 신뢰의 기반이 됩니다.
+
+```bash
+# 로컬에서 SSH Key Pair 생성
+ssh-keygen -t ed25519 -f ~/.ssh/hybrid-cloud_key -N ""
+
+# 생성된 공개 키 확인
+cat ~/.ssh/hybrid-cloud_key.pub
+```
+
+### Step 1. Terraform for AWS Node Provisioning
+
+> AWS 자원 생성에만 집중하며, `user_data` 스크립트를 완전히 배제하여 인프라 프로비저닝과 노드 부트스트래핑의 경계를 명확히 분리합니다. 이는 가장 순수한 형태의 IaC로서, 플랫폼에 종속되지 않는 하이브리드 클라우드 구축의 기반이 됩니다.
+
+#### 1. [`main.tf`](./04-provisioning/aws/main.tf)
+
+* AWS 리전 (`ap-northeast-2`)을 설정하고, SSH 공개 키 및 YANG 기반 JSON 인벤토리 파일의 경로를 변수로 관리하여 유연성을 확보합니다.
+
+* `jsondecode` 함수를 사용하여 주입된 JSON 인벤토리로부터 노드 이름, 인스턴스 유형, 디스크 크기, 공인 IP 필요 여부 등의 자원 명세를 동적으로 읽어옵니다.
+
+* 프로비저닝 완료 후 Ansible이 즉시 접속할 수 있도록 생성된 인스턴스의 공인 IP를 출력합니다.
+
+#### 2. [`network.tf`](./04-provisioning/aws/network.tf)
+
+* Ansible 접속을 위한 SSH (TCP 22) 포트와 하이브리드 메시 네트워크 구성을 위한 Tailscale (UDP 41641) 포트만을 정밀하게 개방합니다.
+
+* 패키지 업데이트 및 외부 서비스 연결을 위해 모든 아웃바운드 트래픽 (Egress)을 허용합니다.
+
+#### 3. [`compute.tf`](./04-provisioning/aws/compute.tf)
+
+* JSON에서 추출한 `instance_type`과 `ebs_size` 등의 명세에 따라 EC2 인스턴스를 생성합니다. 
+
+* 하이브리드 클라우드의 오버레이 네트워킹을 원활하게 지원하기 위해 인스턴스의 `source_dest_check` 옵션을 `false`로 설정합니다. 
+
+* 변수로 지정된 경로의 공개 키 파일을 읽어 (`file()` 함수 사용) 인스턴스에 주입함으로써, 별도의 비밀번호 없이 Ansible이 즉시 진입할 수 있는 통로를 확보합니다.
+
+### Step 2. Shell Scripting for On-Premise Access Bridge
+
+> 전용 API 등 별도의 프로비저닝 수단이 부재한 On-Premise 환경의 한계를 극복하기 위해, SSH 도구를 활용합니다. 이는 Ansible이 대상 노드에 진입하여 구성 관리를 수행하기 위한 사전 준비 단계입니다.
+
+#### 1. [`public_key.sh`](./04-provisioning/on-premise/public_key.sh)
+
+* 리눅스 표준 유틸리티인 `ssh-copy-id`를 사용하여 로컬 머신의 공개 키를 원격 On-Premise 노드에 안전하게 복사합니다.
+
+* 대상 노드의 IP 주소, SSH 포트, 사용자 계정을 변수로 받아 다양한 On-Premise 환경 (Proxmox VM, Bare-metal 등)에 유연하게 대응합니다.
+
+* `ssh-copy-id` 고유의 기능을 통해 중복 키 등록을 방지하고, 원격지의 `.ssh` 디렉토리 및 `authorized_keys` 파일 권한을 보안 정책에 맞게 자동 조정합니다.
+
+#### 2. Orchestration-Ready Design
+
+* 스크립트는 복잡한 노드 설정 기능을 배제하고 오직 SSH 신뢰 관계 구축이라는 단일 목적에만 집중합니다.
+
+* 개별 노드에 대한 수동 실행을 넘어, 외부 오케스트레이터 (Make 또는 Python)가 여러 JSON 인벤토리를 순회하며 본 스크립트를 루프 형태로 호출할 수 있도록 설계되었습니다.
+
+### Step 3. Unified Orchestration with Python
+
+> 하이브리드 클라우드 구축의 전 과정을 조율하는 중앙 통제 레이어입니다. 플랫폼마다 파편화된 프로비저닝 도구들을 단일 인터페이스로 통합하여, 설계와 실제 인프라 사이의 간극을 자동화로 메웁니다.
+
+#### 1. [provisioner.py](./04-provisioning/provisioner.py)
+
+* Data-Driven Execution
+
+    * `02-inventory/` 폴더 내의 모든 JSON 매니페스트를 순회하며 platform 타입을 동적으로 분석합니다.
+
+    * **`aws`** 타입일 경우 Terraform을, **`on-premise`** 타입일 경우 전용 Shell 스크립트를 선택적으로 호출하여 각 환경에 최적화된 프로비저닝을 수행합니다.
+
+* Path Independence
+
+    * `os.path.abspath(__file__)`를 활용하여 스크립트의 절대 경로를 계산합니다.
+
+    * 이로 인해 프로젝트 루트나 하위 디렉토리 등 어느 위치에서 실행하더라도 인벤토리 파일과 Terraform 코드를 정확하게 탐색할 수 있는 견고함을 갖췄습니다.
+
+* Hybrid Data Model Support
+
+    * YANG 모델의 중첩 구조와 사용자가 작성한 평면 구조를 동시에 지원하도록 설계되었습니다.
+
+    * `.get()` 메서드를 활용한 방어적 코딩을 통해 데이터 누락 시에도 기본값을 할당하거나 안전하게 실행을 중단하여 인프라 오염을 방지합니다.
+
+#### 2. Orchestration Flow
+
+* **Inventory Parsing:** `02-inventory/`의 JSON 데이터를 로드하여 노드별 명세를 파악합니다.
+
+* **Tool Selection:** Platform 타입 (`aws` vs `on-premise`)에 따라 적절한 하위 모듈을 트리거합니다.
+
+* **Credential Injection:** 공통 SSH 공개 키를 AWS 키 페어로 등록하거나, On-Premise 노드의 `authorized_keys`에 주입합니다.
 
 ---
-
-## Phase 6. Hybrid Cluster Orchestration & Realization
-
-> **TBD**

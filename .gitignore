@@ -1,7 +1,9 @@
-### custom ###
+### Custom
 storage-client.env
-node-bootstrap.env
 storage-provider.env
+.terraform/
+.terraform.lock.hcl
+.vault_pass
 
 # Created by https://www.toptal.com/developers/gitignore/api/macos,linux,terraform,ansible,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,linux,terraform,ansible,python

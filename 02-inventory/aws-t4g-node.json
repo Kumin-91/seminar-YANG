@@ -3,22 +3,6 @@
     "node": [
       {
         "name": "aws-t4g-node",
-        "compute": {
-          "arch": "arm64",
-          "vcpu": 2,
-          "memory": 4,
-          "burstable": true
-        },
-        "network": {
-          "tailscale-ip": "100.100.2.101",
-          "zone": "cloud"
-        },
-        "storage": {
-            "s3-endpoint": "s3.example.com",
-            "redis-endpoint": "100.100.1.254:4279",
-            "secret-file-path": "storage.env",
-            "cache-size": 5
-        },
         "role-assignment": [
           {
             "role": "server",
@@ -28,7 +12,24 @@
             "role": "agent",
             "priority": "fallback"
           }
-        ]
+        ],
+        "compute": {
+          "platform": "aws",
+          "arch": "arm64",
+          "instance-type": "t4g.medium",
+          "ebs-size": 20
+        },
+        "network": {
+          "ssh-user": "ec2-user",
+          "ssh-port": 22,
+          "public-ip-required": true,
+          "use-eip": false
+        },
+        "storage": {
+          "s3-endpoint": "s3.example.com",
+          "redis-endpoint": "100.100.1.254:4279",
+          "cache-size": 5
+        }
       }
     ]
   }

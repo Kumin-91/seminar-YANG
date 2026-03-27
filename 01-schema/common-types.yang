@@ -3,20 +3,29 @@ module common-types {
     namespace "urn:csmin:params:xml:ns:yang:common-types";
     prefix ct;
 
+    typedef node-platform {
+        type enumeration {
+            enum aws;
+            enum on-premise;
+        }
+    }
     typedef cpu-arch {
         type enumeration {
             enum x86_64;
             enum arm64;
         }
     }
-
+    typedef aws-instance-type {
+        type string {
+            pattern '[tcrm][1-8][a-z]*\.(nano|micro|small|medium)';
+        }
+    }
     typedef k3s-role {
         type enumeration {
             enum server;
             enum agent;
         }
     }
-
     typedef node-role {
         type enumeration {
             enum primary;
