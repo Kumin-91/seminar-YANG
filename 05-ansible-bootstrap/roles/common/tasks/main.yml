@@ -2,11 +2,55 @@
   ansible.builtin.hostname:
     name: "{{ node_spec.name }}"
 
-- name: "필수 도구 설치"
-  ansible.builtin.package:
+- name: "로컬 호스트네임을 /etc/hosts에 등록"
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '^127\.0\.1\.1'
+    line: "127.0.1.1 {{ node_spec.name }}"
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
+- name: "DNS 설정 강제 주입"
+  ansible.builtin.copy:
+    dest: /etc/resolv.conf
+    content: |
+      nameserver 1.1.1.1
+    owner: root
+    group: root
+    mode: '0644'
+  become: yes
+
+- name: "필수 도구 설치 (RedHat/Rocky 계열)"
+  ansible.builtin.dnf:
     name:
       - jq
       - curl
-      - sudo
       - vim
     state: present
+  when: 
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution'] != "Amazon"
+
+- name: "필수 도구 설치 및 curl 충돌 해결 (Amazon Linux)"
+  ansible.builtin.dnf:
+    name:
+      - jq
+      - curl
+      - vim
+    state: present
+    allowerasing: yes
+  when: 
+    - ansible_facts['os_family'] == "RedHat"
+    - ansible_facts['distribution'] == "Amazon"
+
+- name: "필수 도구 설치 (Debian/Ubuntu 계열)"
+  ansible.builtin.apt:
+    name:
+      - jq
+      - curl
+      - vim
+    state: present
+    update_cache: yes 
+  when: ansible_facts['os_family'] == "Debian"

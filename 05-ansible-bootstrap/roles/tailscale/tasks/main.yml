@@ -17,14 +17,13 @@
       --hostname {{ node_spec.name }} \
       --accept-routes=false \
       --accept-dns=false
-  when: "'Logged out' in tailscale_status.stdout or tailscale_status.rc != 0"
+  when: tailscale_status.stdout.find('active') == -1 or tailscale_status.rc != 0
   no_log: true
 
-- name: "4. Tailscale IP 주소 확인"
+- name: "4. Tailscale IPv4 주소 확인"
   ansible.builtin.command: tailscale ip -4
   register: tailscale_ip
   changed_when: false
-  # 연결이 완료될 때까지 최대 10초 대기 (5회 재시도)
   until: tailscale_ip.rc == 0
   retries: 5
   delay: 2

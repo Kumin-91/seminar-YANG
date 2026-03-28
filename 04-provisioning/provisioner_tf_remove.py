@@ -13,6 +13,12 @@ class ProvisionerTFRemove:
         self.terraform_dir = self.base_dir / "04-provisioning" / "aws"
         self.ssh_key_path = Path.home() / ".ssh" / "hybrid-cloud_key.pub"
 
+    def get_node_name(self, manifest_path):
+        """ 매니페스트 파일에서 노드 이름을 추출합니다. YANG 계층 구조에 맞게 조정되어 있습니다. """
+        with open(manifest_path) as f:
+            data = json.load(f)
+        return data['hybrid-cloud:cluster']['node'][0]['name']
+
     def run_command(self, command):
         """명령어를 실행하고 에러 발생 시 상세 메시지와 함께 즉시 중단합니다."""
         try:
@@ -28,7 +34,7 @@ class ProvisionerTFRemove:
         abs_key = self.ssh_key_path.resolve()
 
         # 노드 이름을 기반으로 상태 파일명 추출
-        node_name = abs_manifest.stem
+        node_name = self.get_node_name(manifest_path)
         state_file = f"{node_name}.tfstate"
 
         # 상태 파일이 존재하는지 확인
@@ -36,7 +42,7 @@ class ProvisionerTFRemove:
             print(f"⏩ 스킵: {state_file}이 존재하지 않아 이미 제거된 것으로 간주합니다.", file=sys.stderr)
             return
 
-        print(f"🗑️ AWS 인프라 제거 시작: {abs_manifest.name} (State: {state_file})", file=sys.stderr)
+        print(f"🗑️ AWS 인프라 제거 시작: {node_name} (State: {state_file})", file=sys.stderr)
         cmd = [
             "terraform",
             f"-chdir={str(self.terraform_dir)}",

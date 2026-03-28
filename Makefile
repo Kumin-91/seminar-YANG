@@ -7,6 +7,7 @@ JSON = 02-inventory
 PROVISIONER = 04-provisioning/provisioner.py
 REMOVER = 04-provisioning/provisioner_tf_remove.py
 RESOLVER = 05-ansible-bootstrap/inventory/resolver.py
+ANSIBLE_CFG = 05-ansible-bootstrap/ansible.cfg
 SITE_YAML = 05-ansible-bootstrap/site.yml
 
 
@@ -56,12 +57,12 @@ provision:
 # Ansible 부트스트랩 테스트
 bootstrap-test:
 	@echo "[Phase 5] Ansible 부트스트랩 테스트를 실행합니다..."
-	ansible -i $(RESOLVER) -m ping all
+	ANSIBLE_CONFIG=$(ANSIBLE_CFG) ansible -i $(RESOLVER) -m ping all
 
 # Ansible 부트스트랩 실행
 bootstrap:
 	@echo "[Phase 5] Ansible 부트스트랩을 실행합니다..."
-	$(ANSIBLE) -i $(RESOLVER) $(SITE_YAML)
+	ANSIBLE_CONFIG=$(ANSIBLE_CFG) $(ANSIBLE) -i $(RESOLVER) $(SITE_YAML)
 
 # AWS 인프라 제거
 destroy-aws:

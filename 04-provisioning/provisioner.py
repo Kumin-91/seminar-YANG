@@ -17,6 +17,12 @@ class Provisioner:
             print(f"❌ 에러: SSH 공개키를 찾을 수 없습니다: {self.ssh_key_path}", file=sys.stderr)
             exit(1)
 
+    def get_node_name(self, manifest_path):
+        """ 매니페스트 파일에서 노드 이름을 추출합니다. YANG 계층 구조에 맞게 조정되어 있습니다. """
+        with open(manifest_path) as f:
+            data = json.load(f)
+        return data['hybrid-cloud:cluster']['node'][0]['name']
+
     def run_command(self, command):
         """명령어를 실행하고 에러 발생 시 상세 메시지와 함께 즉시 중단합니다."""
         try:
@@ -32,11 +38,11 @@ class Provisioner:
         abs_key = self.ssh_key_path.resolve()
 
         # 노드 이름을 기반으로 상태 파일명 추출
-        node_name = abs_manifest.stem
+        node_name = self.get_node_name(manifest_path)
         state_file = f"{node_name}.tfstate"
 
         # 프로비저닝
-        print(f"🛰️ AWS 프로비저닝 시작: {abs_manifest.name} (State: {state_file})", file=sys.stderr)
+        print(f"🛰️ AWS 프로비저닝 시작: {node_name} (State: {state_file})", file=sys.stderr)
         cmd = [
             "terraform",
             f"-chdir={str(self.terraform_dir)}",
@@ -79,8 +85,8 @@ class Provisioner:
                     inventory = json.load(f)
                 
                 # YANG 계층 구조에 맞게 노드 정보 추출
+                name = self.get_node_name(manifest_file)
                 node = inventory['hybrid-cloud:cluster']['node'][0]
-                name = node['name']
                 platform = node['compute']['platform']
 
                 print(f"\n--- [프로비저닝 대상: {name} | 플랫폼: {platform}] ---", file=sys.stderr)

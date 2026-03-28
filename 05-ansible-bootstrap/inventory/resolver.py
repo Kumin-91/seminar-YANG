@@ -84,7 +84,8 @@ class InventoryResolver:
                 role_assignment = node.get('role-assignment', [])
                 platform = node['compute']['platform']
                 network = node['network']
-                storage = node['storage']
+                storage = node.get('storage', {})
+                secret_path = None
 
                 print(f"\n--- [작업 대상: {name} | 플랫폼: {platform}] ---", file=sys.stderr)
 
@@ -93,11 +94,15 @@ class InventoryResolver:
                     ansible_host = tf_ips.get(name)
                     if not ansible_host:
                         print(f"⚠️ 경고: '{name}'의 IP를 테라폼 상태에서 찾을 수 없습니다. (프로비저닝 확인 필요)", file=sys.stderr)
-                    secret_path = "/etc/juicefs/storage.env"
+                    if storage:
+                        secret_path = "/etc/juicefs/storage.env"
                     self.inventory['aws']['hosts'].append(name)
                 elif platform == 'on-premise':
                     ansible_host = network.get('on-premise-strategy', {}).get('bootstrap-ip') or network.get('bootstrap-ip')
-                    secret_path = f"/home/{network.get('ssh-user', 'root')}/.juicefs/storage.env"
+                    if not ansible_host:
+                        print(f"⚠️ 경고: '{name}'의 부트스트랩 IP를 매니페스트에서 찾을 수 없습니다. (네트워크 설정 확인 필요)", file=sys.stderr)
+                    if storage:
+                        secret_path = f"/home/{network.get('ssh-user', 'root')}/.juicefs/storage.env"
                     self.inventory['on_premise']['hosts'].append(name)
 
                 # Roll_assignment에 따라 서버/에이전트 그룹에 호스트 추가
@@ -112,12 +117,13 @@ class InventoryResolver:
                     "ansible_port": network.get('ssh-port', 22),
                     "ansible_user": network.get('ssh-user', 'sttb'),
                     "node_spec": node,
+                    "has_storage": bool(storage),
                     "storage_info": {
                         "s3_url": self.format_url(storage.get('s3-endpoint'), 'https'),
                         "redis_url": self.format_url(storage.get('redis-endpoint'), 'redis'),
                         "cache_size": storage.get('cache-size', '1'),
                         "secret_path": secret_path
-                    }
+                    } if storage else None
                 }
             except (KeyError, IndexError, json.JSONDecodeError) as e:
                 print(f"❌ 매니페스트 파일 처리 중 오류 발생 ({manifest_file.name}): {e}", file=sys.stderr)

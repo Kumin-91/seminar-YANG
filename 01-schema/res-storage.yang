@@ -7,17 +7,14 @@ module res-storage {
         container storage {
             leaf s3-endpoint {
                 type string;
-                mandatory true;
                 description "S3 호환 저장소 (MinIO)의 엔드포인트 도메인 (예: bucket.example.com:4200)";
             }
             leaf redis-endpoint {
                 type string;
-                mandatory true;
                 description "메타데이터 관리를 위한 Redis 엔드포인트 (예: 100.100.2.200:4279)";
             }
             leaf cache-size {
                 type uint32;
-                mandatory true;
                 units "GB";
                 description "로컬 NVMe/SSD 캐시 할당량 (GB 단위)";
             }

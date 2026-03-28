@@ -1,8 +1,11 @@
 ---
-- name: "Phase 5. 제목 미정"
+- name: "Phase 5. Ansible-Driven Bootstrapping & Configuration Management"
   hosts: all
   become: yes
   gather_facts: yes
+
+  vars_files:
+    - group_vars/all/tailscale.yml
 
   roles:
     # 1. 공통 설정 및 패키지 설치

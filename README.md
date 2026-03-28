@@ -139,10 +139,10 @@ yanglint -version
     module: hybrid-cloud
     +--rw cluster
         +--rw node* [name]
-            +--rw name               string
+            +--rw name       string
             +--rw role-assignment* [role]
             |  +--rw role        ct:k3s-role
-            |  +--rw priority    ct:node-role
+            |  +--rw priority?   ct:node-role
             +--rw compute
             |  +--rw platform           ct:node-platform
             |  +--rw arch               ct:cpu-arch
@@ -163,9 +163,9 @@ yanglint -version
             |     +--:(on-premise-strategy)
             |        +--rw bootstrap-ip    inet:ip-address
             +--rw storage
-            +--rw s3-endpoint         string
-            +--rw redis-endpoint      string
-            +--rw cache-size          uint32
+            +--rw s3-endpoint?      string
+            +--rw redis-endpoint?   string
+            +--rw cache-size?       uint32
     ```
 
 ### Step 2. Data Instance Modeling: Node-specific JSON Manifests
@@ -193,10 +193,9 @@ done
 ```
 
 ```bash
-# Expected Output
-YANG Lint Pass: 02-inventory/aws-t4g-node-1.json
-YANG Lint Pass: 02-inventory/aws-t4g-node-2.json
-YANG Lint Pass: 02-inventory/aws-t4g-node-3.json
+YANG Lint Pass: 02-inventory/aws-t4g-node-test-1.json
+YANG Lint Pass: 02-inventory/aws-t4g-node-test-2.json
+YANG Lint Pass: 02-inventory/aws-t4g-node-test-3.json
 YANG Lint Pass: 02-inventory/aws-t4g-node.json
 YANG Lint Pass: 02-inventory/site-a-node.json
 YANG Lint Pass: 02-inventory/site-b-node.json
@@ -397,17 +396,87 @@ cat ~/.ssh/hybrid-cloud_key.pub
 
 #### 1. Ansible Core Configuration: [`ansible.cfg`](./05-ansible-bootstrap/ansible.cfg)
 
-> **TBD**
+* 동적 리졸버와의 연동, 보안 인증, 그리고 하이브리드 환경의 지연 시간을 극복하기 위한 성능 최적화 설정을 정의합니다.
+
+    ```ini
+    [defaults]
+    # 인벤토리 스크립트 경로 설정
+    inventory = ./inventory/resolver.py
+    # SSH 개인 키 파일 경로 설정
+    private_key_file = ~/.ssh/hybrid-cloud_key
+    # Vault 파일 경로 설정
+    vault_password_file = ./.vault_pass
+    # SSH 호스트 키 검증 비활성화
+    host_key_checking = False
+    # Python 인터프리터 자동 감지 설정 (불필요한 경고 메시지 제거)
+    interpreter_python = auto_silent
+    # 출력 형식 설정 (YAML)
+    stdout_callback = ansible.builtin.default
+
+    [ssh_connection]
+    # SSH 연결 최적화 설정
+    pipelining = True
+    # SSH 연결 재사용 설정
+    ssh_args = -o ControlMaster=auto -o ControlPersist=60s
+
+    [callback_default]
+    # 출력 형식 설정 (YAML)
+    result_format = yaml
+    ```
 
 #### 2. Common Infrastructure Baseline: [`common/tasks/main.yml`](./05-ansible-bootstrap/roles/common/tasks/main.yml)
 
-> **TBD**
+* 모든 노드가 갖춰야 할 최소 요건을 구성합니다.
+
+* `node_spec` 기반의 호스트네임 설정 및 `/etc/hosts` 정비를 통해 `sudo` 지연과 이름 해석 에러를 원천 차단합니다.
+
+* 외부 저장소 및 API 통신을 위해 신뢰할 수 있는 DNS 설정을 강제 주입하여 `apt`/`dnf` 업데이트의 안정성을 확보합니다. 
+
+* `os_family` 및 `distribution` 팩트를 활용하여 OS별로 최적화된 필수 도구 (`jq`, `curl`, `vim`)를 설치합니다.
+
+* **Amazon Linux 대응**
+
+    * Amazon Linux 2023의 기본 패키지인 `curl-minimal`은 일반 `curl` 설치 시 의존성 충돌을 일으킵니다.
+
+    * Amazon Linux 환경을 별도로 감지하여, `allowerasing: yes` 옵션을 통해 기존 패키지를 안전하게 교체하고 표준 도구 세트를 완성합니다.
 
 ### Step 3. Ansible Playbook for Tailscale Mesh Network Setup: [`tailscale/tasks/main.yml`](./05-ansible-bootstrap/roles/tailscale/tasks/main.yml)
 
 > 모든 노드가 하나의 Overlay 네트워크로 연결하기 위한 Tailscale 설치 및 초기 설정을 담당합니다.
 
-> **TBD**
+#### 1. Tailscale 설치 스크립트 실행
+
+* Tailscale 공식 설치 스크립트를 활용하여, Amazon Linux (ARM64)와 Debian (x86_64) 등 서로 다른 플랫폼과 아키텍처에 상관없이 일관된 설치 과정을 보장합니다.
+
+* `creates: /usr/sbin/tailscale` 옵션을 통해 이미 설치된 노드에서는 중복 실행을 방지하는 멱등성을 확보했습니다.
+
+#### 2. Tailscale 현재 상태 체크
+
+* `tailscale status` 명령을 통해 현재 노드의 연결 상태를 사전에 파악합니다.
+
+* 이미 네트워크에 가입된 노드에 불필요한 가입 요청 (`tailscale up`)을 보내지 않도록 로직을 보호합니다.
+
+#### 3. Tailscale 서비스 활성화 및 시작
+
+* `ansible-vault`로 암호화된 인증 키를 활용하며, `no_log: true` 설정을 통해 민감한 키 정보가 앤서블 실행 로그에 남지 않도록 보안을 강화했습니다.
+
+* `tailscale up` 명령을 실행하여, 노드를 Tailscale 네트워크에 연결합니다.
+
+* `--authkey {{ tailscale_auth_key }}` 옵션을 주입하여 수동 인증 과정 없는 완전 자동화된 네트워크 가입을 실현합니다.
+
+* 리졸버에서 추출한 `{{ node_spec.name }}`을 호스트네임으로 지정하여, Tailscale 대시보드 내에서 노드 식별을 명확히 합니다.
+
+#### 4. Tailscale IPv4 주소 확인
+
+* 네트워크 가입 후 할당된 `100.64.0.0/16` 대역의 사설 IP 주소를 `tailscale ip -4` 명령으로 실시간 확인합니다.
+
+* 연결이 완료될 때까지 최대 5회 재시도를 수행하여, 네트워크 인터페이스가 활성화되는 물리적 시간을 안정적으로 확보합니다.
+
+#### 5. 연결 성공 메시지 출력
+
+* 모든 부트스트랩 과정이 완료되면 각 노드의 이름과 고유한 Tailscale IP를 출력합니다.
+
+<!--
 
 ### Step 4. Ansible Playbook for JuiceFS Setup: [`juicefs/tasks/main.yml`](./05-ansible-bootstrap/roles/juicefs/tasks/main.yml)
 
@@ -432,5 +501,7 @@ cat ~/.ssh/hybrid-cloud_key.pub
 > 모든 Playbook을 순차적으로 실행하여, 하이브리드 클라우드의 완전한 부트스트래핑을 달성하는 단일 진입점입니다.
 
 > **TBD**
+
+-->
 
 ---
