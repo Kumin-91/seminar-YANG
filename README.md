@@ -10,6 +10,8 @@
 
 [Phase 4. Automating Node Provisioning with Terraform & Shell Scripting](#phase-4-automating-node-provisioning-with-terraform--shell-scripting)
 
+[Phase 5. Ansible-Driven Bootstrapping & Configuration Management](#phase-5-ansible-driven-bootstrapping--configuration-management)
+
 ## Phase 0. Physical Inventory & Resource Specification
 
 ### Step 1. Strategic Role Allocation & Infrastructure Hierarchy
@@ -34,13 +36,13 @@
 
 ## Phase 1. Logical Abstraction via YANG Modeling
 
-### Step 1. Base Type Definitions: [common-types.yang](./01-schema/common-types.yang)
+### Step 1. Base Type Definitions: [`common-types.yang`](./01-schema/common-types.yang)
 
 * Platform (AWS/On-Premise), Arch, K3s Role 등에 대한 표준 데이터 타입을 정의합니다.
 
 * AWS 인스턴스 타입은 정규표현식을 통해 medium 이하 규격으로 엄격히 제한됩니다.
 
-### Step 2. Compute Resource Abstraction: [res-compute.yang](./01-schema/res-compute.yang)
+### Step 2. Compute Resource Abstraction: [`res-compute.yang`](./01-schema/res-compute.yang)
 
 * 플랫폼별 연산 자원 명세를 담당하며, Platform 값에 따라 입력 항목을 동적으로 강제합니다.
 
@@ -48,19 +50,19 @@
 
 * On-Premise: vCPU 및 Memory 범위를 직접 지정하여 하드웨어 제약 내에서 자원을 선언합니다.
 
-### Step 3. Network Perimeter & Policy Modeling: [res-network.yang](./01-schema/res-network.yang)
+### Step 3. Network Perimeter & Policy Modeling: [`res-network.yang`](./01-schema/res-network.yang)
 
 * 초기 프로비저닝 (Underlay)을 위한 접속 계정과 포트 정보를 정의합니다.
 
 * AWS의 Late Binding 전략과 On-Premise의 Early Binding 전략을 구분하여 모델링합니다.
 
-### Step 4. Distributed Storage Logic Modeling: [res-storage.yang](./01-schema/res-storage.yang)
+### Step 4. Distributed Storage Logic Modeling: [`res-storage.yang`](./01-schema/res-storage.yang)
 
 * 분산 스토리지 (JuiceFS) 환경 구성을 위한 엔드포인트와 캐시 정책을 정의합니다.
 
 * 자격 증명과 같은 민감 데이터를 YANG 명세에서 배제하고 앤서블의 동적 주입 방식으로 전환하여, 설계도의 범용성을 높이고 보안 사고를 원천 차단합니다.
 
-### Step 5. Holistic Cluster Integration: [hybrid-cloud.yang](./01-schema/hybrid-cloud.yang)
+### Step 5. Holistic Cluster Integration: [`hybrid-cloud.yang`](./01-schema/hybrid-cloud.yang)
 
 * 개별 리소스 모델을 통합하여 하이브리드 클러스터의 단일 진실 원천 (SSoT)을 구축합니다.
 
@@ -134,11 +136,17 @@ yanglint --version
 
 ### Step 2. Data Instance Modeling: Node-specific JSON Manifests
 
-* **[aws-t4g-node.json](./02-inventory/aws-t4g-node.json)**
+* **[`aws-t4g-node.json`](./02-inventory/aws-t4g-node.json)**
 
-* **[site-a-node.json](./02-inventory/site-a-node.json)**
+* **[`aws-t4g-node-1.json`](./02-inventory/aws-t4g-node-1.json)**
 
-* **[site-b-node.json](./02-inventory/site-b-node.json)**
+* **[`aws-t4g-node-2.json`](./02-inventory/aws-t4g-node-2.json)**
+
+* **[`aws-t4g-node-3.json`](./02-inventory/aws-t4g-node-3.json)**
+
+* **[`site-a-node.json`](./02-inventory/site-a-node.json)**
+
+* **[`site-b-node.json`](./02-inventory/site-b-node.json)**
 
 ### Step 3. Schema Compliance Verification & Data Integrity Audit
 
@@ -181,7 +189,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 1. Containerized Storage Backend Deployment
 
-* **[docker-compose.yml](./03-storage-provider/docker-compose.yml)** 을 활용하여 스토리지 백엔드 구성을 코드화합니다.
+* **[`docker-compose.yml`](./03-storage-provider/docker-compose.yml)** 을 활용하여 스토리지 백엔드 구성을 코드화합니다.
 
 * Host OS 환경에 의존하지 않고, 컨테이너 기술을 통해 엔진의 배포와 버전 관리를 단순화합니다.
 
@@ -256,11 +264,11 @@ cat ~/.ssh/hybrid-cloud_key.pub
 
 * 개별 노드에 대한 수동 실행을 넘어, 외부 오케스트레이터 (Make 또는 Python)가 여러 JSON 인벤토리를 순회하며 본 스크립트를 루프 형태로 호출할 수 있도록 설계되었습니다.
 
-### Step 3. Unified Orchestration with Python
+### Step 3. Unified Orchestration with Python: [`provisioner.py`](./04-provisioning/provisioner.py)
 
 > 하이브리드 클라우드 구축의 전 과정을 조율하는 중앙 통제 레이어입니다. 플랫폼마다 파편화된 프로비저닝 도구들을 단일 인터페이스로 통합하여, 설계와 실제 인프라 사이의 간극을 자동화로 메웁니다.
 
-#### 1. [provisioner.py](./04-provisioning/provisioner.py)
+#### 1. Design Principles
 
 * Data-Driven Execution
 
@@ -270,9 +278,13 @@ cat ~/.ssh/hybrid-cloud_key.pub
 
 * Path Independence
 
-    * `os.path.abspath(__file__)`를 활용하여 스크립트의 절대 경로를 계산합니다.
+    * `Path(__file__).resolve().parent.parent`를 활용하여 스크립트의 절대 경로를 계산합니다.
 
     * 이로 인해 프로젝트 루트나 하위 디렉토리 등 어느 위치에서 실행하더라도 인벤토리 파일과 Terraform 코드를 정확하게 탐색할 수 있는 견고함을 갖췄습니다.
+
+* State Independence
+
+    * Terraform 실행시 각 노드별로 독립적인 `.tfstate` 파일을 생성하여, 리소스 간 충돌을 방지하고 특정 노드만 선택적으로 프로비저닝하거나 제거할 수 있는 수평적 확장성을 확보했습니다.
 
 * Hybrid Data Model Support
 
@@ -287,5 +299,99 @@ cat ~/.ssh/hybrid-cloud_key.pub
 * **Tool Selection:** Platform 타입 (`aws` vs `on-premise`)에 따라 적절한 하위 모듈을 트리거합니다.
 
 * **Credential Injection:** 공통 SSH 공개 키를 AWS 키 페어로 등록하거나, On-Premise 노드의 `authorized_keys`에 주입합니다.
+
+#### 3. [`provisioner_tf_remove.py`](./04-provisioning/provisioner_tf_remove.py)
+
+* Cost-Optimization & Resource Recovery
+
+    * 사용하지 않는 AWS 인프라를 즉시 회수하여 불필요한 과금을 방지하고 클라우드 자원을 효율적으로 관리합니다.
+
+    * `terraform destroy` 명령을 자동화하여 수동 작업 시 발생할 수 있는 자원 누락 문제를 원천 차단합니다.
+
+* State-Aware De-provisioning
+
+    * 각 노드별로 분리된 `.tfstate` 파일을 기반으로 동작하므로, 전체 클러스터에 영향을 주지 않고 특정 노드의 자원만 안전하게 제거할 수 있습니다.
+
+    * 실제 `terraform destroy` 명령을 내리기 전 해당 노드의 상태 파일 존재 여부를 먼저 검사하여, 이미 제거된 자원에 대한 중복 실행 에러를 방지하는 방어적 로직을 갖췄습니다.
+
+* Execution Consistency
+
+    * 프로비저닝 단계와 동일한 매니페스트 경로 및 SSH 키 경로 변수를 Terraform에 주입합니다.
+
+    * 이를 통해 Terraform이 파괴 시점에도 동적 자원 이름을 정확히 계산하여, 이름 충돌 없이 대상 자원을 식별할 수 있도록 보장합니다.
+
+---
+
+## Phase 5. Ansible-Driven Bootstrapping & Configuration Management
+
+### Step 1. Dynamic Inventory Generation: [`resolver.py`](./05-ansible-bootstrap/inventory/resolver.py)
+
+> 수동으로 hosts 파일을 수정하는 전통적인 방식에서 벗어나, 코드가 인프라의 변화를 스스로 감지하고 환경 설정을 업데이트하는 Self-Healing Inventory를 구현했습니다.
+
+#### 1. Multi-State Data Aggregator
+
+* `.tfstate` 파일을 전부 탐색하여, AWS에서 프로비저닝된 노드들의 공인 IP 주소를 하나의 Map으로 집계합니다.
+
+* 노드가 추가되거나 제거가 되더라도, 실행 시점의 Terraform 상태를 반영하므로 항상 최신의 인벤토리를 유지할 수 있습니다.
+
+#### 2. Architectural Intent & Design Principles
+
+* YANG 매니페스트와 Terraform의 상태 파일을 동시에 참조하여 Ansible이 이해할 수 있는 `HostVars` 구조로 변환합니다.
+
+* 설계도에 정의된 `role-assignment`, `storage`, `compute` 등의 메타데이터를 개별 노드의 변수로 완벽하게 이식합니다.
+
+#### 3. Standardized Ansible JSON Inventory Format
+
+* Ansible의 Dynamic Inventory 규격에 맞춘 JSON 출력을 생성하여, `_meta` 정보를 포함한 데이터를 생성합니다.
+
+* `aws`, `on-premise`, `server`, `agent` 등의 논리적 그룹핑을 자동으로 생성하여, 플레이북에서 유연하게 타겟팅할 수 있도록 지원합니다.
+
+#### 4. Operational Transparency
+
+* 처리 과정과 디버깅 로그는 `sys.stderr`로 출력하여, Ansible이 JSON 데이터를 표준 출력 (`sys.stdout`)으로만 인식하도록 설계되었습니다.
+
+* 이를 통해 Ansible 파싱 에러를 방지하면서, 터미널로 실시간 수집 현황을 모니터링할 수 있도록 했습니다.
+
+### Step 2. Establishing the Baseline: Core Ansible Configuration & Common Playbook
+
+> Ansible이 하이브리드 클라우드의 다양한 환경에서 일관된 방식으로 작동할 수 있도록, 핵심 설정과 공통 작업을 정의하는 단계입니다. 이는 이후의 플레이북들이 안정적으로 실행될 수 있는 기반을 마련합니다.
+
+#### 1. Ansible Core Configuration: [`ansible.cfg`](./05-ansible-bootstrap/ansible.cfg)
+
+> **TBD**
+
+#### 2. Common Infrastructure Baseline: [`common/tasks/main.yml`](./05-ansible-bootstrap/roles/common/tasks/main.yml)
+
+> **TBD**
+
+### Step 3. Ansible Playbook for Tailscale Mesh Network Setup: [`tailscale/tasks/main.yml`](./05-ansible-bootstrap/roles/tailscale/tasks/main.yml)
+
+> 모든 노드가 하나의 Overlay 네트워크로 연결하기 위한 Tailscale 설치 및 초기 설정을 담당합니다.
+
+> **TBD**
+
+### Step 4. Ansible Playbook for JuiceFS Setup: [`juicefs/tasks/main.yml`](./05-ansible-bootstrap/roles/juicefs/tasks/main.yml)
+
+> JuiceFS 클라이언트 설치 및 S3/Redis 엔드포인트 연결을 담당합니다.
+
+> **TBD**
+
+### Step 5. Ansible Playbook for K3s Cluster Bootstrapping
+
+> K3s 서버와 에이전트 노드 각각에 대한 플레이북을 별도로 작성하여, 역할별로 최적화된 부트스트래핑 과정을 구현합니다.
+
+#### 1. Playbook for Server: [`k3s-server/tasks/main.yml`](./05-ansible-bootstrap/roles/k3s-server/tasks/main.yml)
+
+> **TBD**
+
+#### 2. Playbook for Agent: [`k3s-agent/tasks/main.yml`](./05-ansible-bootstrap/roles/k3s-agent/tasks/main.yml)
+
+> **TBD**
+
+### Step 6. Master Orchestration Entrypoint: [`site.yml`](./05-ansible-bootstrap/site.yml)
+
+> 모든 Playbook을 순차적으로 실행하여, 하이브리드 클라우드의 완전한 부트스트래핑을 달성하는 단일 진입점입니다.
+
+> **TBD**
 
 ---

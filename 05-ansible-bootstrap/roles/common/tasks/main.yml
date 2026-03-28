@@ -1,0 +1,12 @@
+- name: "호스트네임 적용"
+  ansible.builtin.hostname:
+    name: "{{ node_spec.name }}"
+
+- name: "필수 도구 설치"
+  ansible.builtin.package:
+    name:
+      - jq
+      - curl
+      - sudo
+      - vim
+    state: present

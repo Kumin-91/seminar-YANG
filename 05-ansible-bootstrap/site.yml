@@ -1,0 +1,20 @@
+---
+- name: "Phase 5. 제목 미정"
+  hosts: all
+  become: yes
+  gather_facts: yes
+
+  roles:
+    # 1. 공통 설정 및 패키지 설치
+    - role: common
+    
+    # 2. Tailscale 메시 네트워크 구성
+    - role: tailscale
+
+  post_tasks:
+      - name: "통합 완료 메시지 출력"
+        ansible.builtin.debug:
+          msg: |
+            [SUCCESS] Node '{{ node_spec.name }}' 프로비저닝 완료!
+            - 플랫폼: {{ node_spec.compute.platform }}
+            - 아키텍처: {{ node_spec.compute.arch }}

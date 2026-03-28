@@ -1,0 +1,34 @@
+- name: "1. Tailscale 설치 스크립트 실행"
+  ansible.builtin.shell: |
+    curl -fsSL https://tailscale.com/install.sh | sh
+  args:
+    creates: /usr/sbin/tailscale
+
+- name: "2. Tailscale 현재 상태 체크"
+  ansible.builtin.command: tailscale status
+  register: tailscale_status
+  failed_when: false
+  changed_when: false
+
+- name: "3. Tailscale 서비스 활성화 및 시작"
+  ansible.builtin.shell: |
+    tailscale up \
+      --authkey {{ tailscale_auth_key }} \
+      --hostname {{ node_spec.name }} \
+      --accept-routes=false \
+      --accept-dns=false
+  when: "'Logged out' in tailscale_status.stdout or tailscale_status.rc != 0"
+  no_log: true
+
+- name: "4. Tailscale IP 주소 확인"
+  ansible.builtin.command: tailscale ip -4
+  register: tailscale_ip
+  changed_when: false
+  # 연결이 완료될 때까지 최대 10초 대기 (5회 재시도)
+  until: tailscale_ip.rc == 0
+  retries: 5
+  delay: 2
+
+- name: "5. 연결 성공 메시지 출력"
+  ansible.builtin.debug:
+    msg: "노드 '{{ node_spec.name }}'이(가) Tailscale 네트워크에 연결되었습니다. IP: {{ tailscale_ip.stdout }}"

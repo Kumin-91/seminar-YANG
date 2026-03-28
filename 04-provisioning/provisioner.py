@@ -1,69 +1,109 @@
+#!/usr/bin/env python3
+
+import sys
 import json
 import subprocess
-import glob
-import os
+from pathlib import Path
 
-# 파이썬 절대 경로 설정
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+class Provisioner:
+    def __init__(self):
+        self.base_dir = Path(__file__).resolve().parent.parent
+        self.inventory_dir = self.base_dir / "02-inventory"
+        self.terraform_dir = self.base_dir / "04-provisioning" / "aws"
+        self.on_premise_script = self.base_dir / "04-provisioning" / "on-premise" / "public_key.sh"
+        self.ssh_key_path = Path.home() / ".ssh" / "hybrid-cloud_key.pub"
 
-# 설정 파일 경로
-INVENTORY_DIR = os.path.join(BASE_DIR, '../02-inventory')
-TERRAFORM_DIR = os.path.join(BASE_DIR, 'aws')
-ONPREMISE_SCRIPT = os.path.join(BASE_DIR, 'on-premise/public_key.sh')
-SSH_KEY_PATH = os.path.expanduser('~/.ssh/hybrid-cloud_key.pub')
+        if not self.ssh_key_path.exists():
+            print(f"❌ 에러: SSH 공개키를 찾을 수 없습니다: {self.ssh_key_path}", file=sys.stderr)
+            exit(1)
 
-def run_command(command):
-    try:
-        result = subprocess.run(command, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if result.stdout:
-            print(result.stdout.decode())
-    except subprocess.CalledProcessError as e:
-        print(f"Error executing command: {e.stderr.decode()}")
-        exit(1)
+    def run_command(self, command):
+        """명령어를 실행하고 에러 발생 시 상세 메시지와 함께 즉시 중단합니다."""
+        try:
+            subprocess.run(command, check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"\n❌ 명령어 실행 실패: {command}", file=sys.stderr)
+            exit(1)
 
-def provision_aws(abs_manifest_path):
-    cmd = (f"terraform -chdir={TERRAFORM_DIR} apply -auto-approve "
-           f"-var=manifest_path={abs_manifest_path} "
-           f"-var=public_key_path={SSH_KEY_PATH}")
-    run_command(cmd)
+    def provision_aws(self, manifest_path):
+        """Terraform을 호출하여 AWS 인프라를 생성합니다."""
+        # 절대 경로로 변환하여 명확한 출력 제공
+        abs_manifest = Path(manifest_path).resolve()
+        abs_key = self.ssh_key_path.resolve()
 
-def provision_on_premise(ssh_host, ssh_port, ssh_user):
-    run_command(f"bash {ONPREMISE_SCRIPT} {ssh_host} {ssh_port} {ssh_user} {SSH_KEY_PATH}")
+        # 노드 이름을 기반으로 상태 파일명 추출
+        node_name = abs_manifest.stem
+        state_file = f"{node_name}.tfstate"
 
-def orchestrate():
-    manifests= glob.glob(os.path.join(INVENTORY_DIR, '*.json'))
+        # 프로비저닝
+        print(f"🛰️ AWS 프로비저닝 시작: {abs_manifest.name} (State: {state_file})", file=sys.stderr)
+        cmd = [
+            "terraform",
+            f"-chdir={str(self.terraform_dir)}",
+            "apply",
+            "-auto-approve",
+            f"-state={state_file}",
+            f"-var=manifest_path={str(abs_manifest)}",
+            f"-var=public_key_path={str(abs_key)}"
+        ]
+        self.run_command(cmd)
 
-    if not manifests:
-        print("No inventory files found in the directory.")
-        return
-    
-    print(f"Found {len(manifests)} inventory files. Starting provisioning...")
+    def provision_on_premise(self, ssh_host, ssh_port, ssh_user):
+        """온프레미스 노드에 SSH 마스터 키를 주입합니다."""
+        ssh_key = self.ssh_key_path.resolve()
 
-    for manifest_file in manifests:
-        abs_manifest_path = os.path.abspath(manifest_file)
-        with open(abs_manifest_path) as f:
-            inventory = json.load(f)
+        print(f"🔑 SSH 키 주입 중: {ssh_user}@{ssh_host}:{ssh_port}", file=sys.stderr)
+        cmd = [
+            "bash",
+            str(self.on_premise_script),
+            str(ssh_host),
+            str(ssh_port),
+            str(ssh_user),
+            str(ssh_key)
+        ]
+        self.run_command(cmd)
+
+    def orchestrate(self):
+        """인벤토리의 모든 노드를 순회하며 프로비저닝을 오케스트레이션합니다."""
+        manifests = list(self.inventory_dir.glob("*.json"))
+
+        if not manifests:
+            print(f"⚠️ {self.inventory_dir} 디렉토리에 JSON 파일이 없습니다.", file=sys.stderr)
+            return
         
-        node = inventory['hybrid-cloud:cluster']['node'][0]
-        platform = node['compute']['platform']
-        name = node['name']
+        print(f"✅ 총 {len(manifests)}개의 노드 설계를 발견했습니다. 작업을 시작합니다.", file=sys.stderr)
 
-        print(f"\n--- Node '{name}' on Platform '{platform}'...")
+        for manifest_file in manifests:
+            try:
+                with open(manifest_file) as f:
+                    inventory = json.load(f)
+                
+                # YANG 계층 구조에 맞게 노드 정보 추출
+                node = inventory['hybrid-cloud:cluster']['node'][0]
+                name = node['name']
+                platform = node['compute']['platform']
 
-        if platform == 'aws':
-            provision_aws(abs_manifest_path)
+                print(f"\n--- [프로비저닝 대상: {name} | 플랫폼: {platform}] ---", file=sys.stderr)
 
-        elif platform == 'on-premise':
-            network = node.get('network', {})
+                # Platform에 따라 프로비저닝 실행
+                if platform == 'aws':
+                    self.provision_aws(manifest_file)
+                elif platform == 'on-premise':
+                    network = node.get('network', {})
+                    ssh_host = network.get('on-premise-strategy', {}).get('bootstrap-ip') or network.get('bootstrap-ip')
+                    ssh_port = network.get('ssh-port', 22)
+                    ssh_user = network.get('ssh-user', 'sttb')
 
-            ssh_host = network.get('on-premise-strategy', {}).get('bootstrap-ip') or network.get('bootstrap-ip')
-            ssh_port = network.get('ssh-port', 22)
-            ssh_user = network.get('ssh-user', 'root')
+                    if ssh_host:
+                        self.provision_on_premise(ssh_host, ssh_port, ssh_user)
+                    else:
+                        print(f"❌ 에러: 노드 '{name}'의 접속 IP를 찾을 수 없습니다. 건너뜁니다.", file=sys.stderr)
 
-            if ssh_host:
-                provision_on_premise(ssh_host, ssh_port, ssh_user)
-            else:
-                print(f"Error: No bootstrap IP found for on-premise node '{name}'. Skipping...")
+            except (KeyError, IndexError, json.JSONDecodeError) as e:
+                print(f"❌ 매니페스트 파일 처리 중 오류 발생 ({manifest_file.name}): {e}", file=sys.stderr)
+                continue
 
 if __name__ == "__main__":
-    orchestrate()
+    print("🚀 하이브리드 클라우드 인프라 프로비저닝 프로세스 가동", file=sys.stderr)
+    provisioner = Provisioner()
+    provisioner.orchestrate()
