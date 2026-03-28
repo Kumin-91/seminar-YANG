@@ -1,5 +1,26 @@
 # One Logical Infrastructure, Many Physical Realities: A YANG-Driven Hybrid Cloud with K3s
 
+## How to Use This Repository
+
+```plain text
+Usage: make [target]
+Targets:
+    help            - 이 도움말 메시지를 출력합니다.
+    all             - 모든 과정을 실행합니다.
+    lint            - [Phase 2] YANG 모델 검사 및 JSON 검증을 실행합니다.
+    provision       - [Phase 4] AWS/On-premises 인프라 프로비저닝을 실행합니다.
+    bootstrap-test  - [Phase 5] Ansible connectivity를 테스트합니다.
+    bootstrap       - [Phase 5] Ansible playbook을 실행하여 bootstrap을 수행합니다.
+    destroy-aws     - [Phase 4] AWS infrastructure를 제거합니다.
+    clean           - [Phase 4] 생성된 파일 및 캐시를 정리합니다.
+```
+
+## Tools
+
+[YANG](https://nso-docs.cisco.com/guides/nso-6.2/development/core-concepts/yang) | [Terraform](https://developer.hashicorp.com/terraform) | [Ansible](https://docs.ansible.com/) | [CESNET/libyang](#step-0-environment-setup-macos-with-homebrew-cesnet--libyang)
+
+## Table of Contents
+
 [Phase 0. Physical Inventory & Resource Specification](#phase-0-physical-inventory--resource-specification)
 
 [Phase 1. Logical Abstraction via YANG Modeling](#phase-1-logical-abstraction-via-yang-modeling)
@@ -72,15 +93,28 @@
 
 ## Phase 2. Data Integrity & Schema Validation
 
-### Step 0. Environment Setup: libyang & yanglint (Rocky Linux 9)
+### Step 0. Environment Setup (macOS with Homebrew): [CESNET / libyang](https://github.com/CESNET/libyang)
 
 ```bash
-# libyang 설치
-sudo dnf install libyang
+# 레포지토리 클론
+git clone https://github.com/CESNET/libyang.git
 
-# yanglint 설치 확인
-yanglint --version
-# yanglint 2.0.7
+# 필요 패키지 설치
+brew install cmake pcre2 pkg-config
+
+# 빌드 및 설치
+mkdir build && cd build
+cmake -DCMAKE_INSTALL_PREFIX=/usr/local \
+      -DCMAKE_INSTALL_RPATH="/usr/local/lib" \
+      -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=TRUE ..
+make -j$(sysctl -n hw.ncpu)
+sudo make install
+```
+
+```bash
+# 설치 확인
+yanglint -version
+# yanglint 4.2.2
 ```
 
 ### Step 1. Hierarchical Schema Visualization & Structural Audit
@@ -151,13 +185,18 @@ yanglint --version
 ### Step 3. Schema Compliance Verification & Data Integrity Audit
 
 ```bash
-for f in 02-inventory/*.json; do 
-    yanglint -p 01-schema -t data 01-schema/hybrid-cloud.yang "$f" && echo "YANG Lint Pass: $f"
+for f in 02-inventory/*.json; do \
+	yanglint -p 01-schema -t data 01-schema/hybrid-cloud.yang "$f" > /dev/null 2>&1 && \
+	echo "YANG Lint Pass: $f" || \
+	(echo "YANG Lint Fail: $f" && exit 1); \
 done
 ```
 
 ```bash
 # Expected Output
+YANG Lint Pass: 02-inventory/aws-t4g-node-1.json
+YANG Lint Pass: 02-inventory/aws-t4g-node-2.json
+YANG Lint Pass: 02-inventory/aws-t4g-node-3.json
 YANG Lint Pass: 02-inventory/aws-t4g-node.json
 YANG Lint Pass: 02-inventory/site-a-node.json
 YANG Lint Pass: 02-inventory/site-b-node.json
