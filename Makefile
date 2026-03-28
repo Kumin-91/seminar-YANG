@@ -71,6 +71,6 @@ destroy-aws:
 # 생성된 파일 및 캐시 정리
 clean:
 	@echo "[Phase 4] 생성된 파일 및 캐시를 정리합니다..."
-	@echo "이 명령어는 destroy-aws가 먼저 실행된 후에 사용되어야 합니다."; read _
-	find . -name "*.tfstate*" -type f -delete
-	find . -name "__pycache__" -type d -exec rm -rf {} +
+	@echo "이 명령어는 destroy-aws가 먼저 실행된 후에 사용되어야 합니다. (Enter로 확인)"; read _
+	find . -name "*.tfstate*" -type f -print -delete
+	find . -name "__pycache__" -type d -print -exec rm -rf {} +
