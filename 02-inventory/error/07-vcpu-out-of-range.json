@@ -1,0 +1,13 @@
+{
+  "hybrid-cloud:cluster": {
+    "node": [{
+      "name": "err-node-7",
+      "compute": {
+        "platform": "on-premise",
+        "arch": "x86_64",
+        "vcpu": 64,
+        "memory": 16
+      }
+    }]
+  }
+}

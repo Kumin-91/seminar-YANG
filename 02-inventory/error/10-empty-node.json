@@ -1,0 +1,7 @@
+{
+  "hybrid-cloud:cluster": {
+    "node": [{
+      "name": "err-node-10"
+    }]
+  }
+}

@@ -21,13 +21,19 @@ module res-compute {
                     when "platform = 'aws'";
                     leaf instance-type {
                         type ct:aws-instance-type;
+
+                        must "(../arch = 'arm64' and re-match(., '[tcrm][1-8]g.*')) or " + 
+                             "(../arch = 'x86_64' and not(re-match(., '[tcrm][1-8]g.*')))" {
+                            error-message "Architecture mismatch detected: 'arm64' platform requires 'g' instance types, while 'x86_64' platform cannot use 'g' instance types.";
+                        }
+
                         mandatory true;
                         description "AWS 인스턴스 유형 (예: t4g.medium)";
                     }
                     leaf ebs-size {
                         type uint16;
                         units "GB";
-                        default 20;
+                        mandatory true;
                         description "AWS EBS 볼륨 크기 (GB 단위)";
                     }
                 }

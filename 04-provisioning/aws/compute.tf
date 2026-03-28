@@ -6,7 +6,7 @@ resource "aws_key_pair" "hybrid_cloud" {
 
 # EC2 인스턴스 (t4g.medium)
 resource "aws_instance" "node" {
-    ami           = "ami-055751883cc1be227"
+    ami           = data.aws_ami.selected.id
     instance_type = local.instance_type
     key_name      = aws_key_pair.hybrid_cloud.key_name
     vpc_security_group_ids = [aws_security_group.hybrid_cloud_sg.id]
@@ -22,5 +22,6 @@ resource "aws_instance" "node" {
 
     tags = {
         Name = local.node_name
+        Architecture = local.arch
     }
 }

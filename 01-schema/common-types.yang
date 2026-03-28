@@ -17,7 +17,14 @@ module common-types {
     }
     typedef aws-instance-type {
         type string {
-            pattern '[tcrm][1-8][a-z]*\.(nano|micro|small|medium)';
+            /* 구조 분석:
+                1. [tcrm]: 인스턴스 패밀리
+                2. [1-8]: 세대 번호
+                3. [gai]?: 프로세서 (g:Graviton, a:AMD, i:Intel) - 생략 시 인텔/표준
+                4. [dbn]*: 부가 기능 (d:Disk, b:EBS, n:Network)
+                5. \.(nano|micro|small|medium): 인스턴스 사이즈
+            */
+            pattern '[tcrm][1-8][gai]?[dbn]*\.(nano|micro|small|medium)';
         }
     }
     typedef k3s-role {

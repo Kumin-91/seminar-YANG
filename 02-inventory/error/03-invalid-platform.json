@@ -1,0 +1,12 @@
+{
+  "hybrid-cloud:cluster": {
+    "node": [{
+      "name": "err-node-3",
+      "compute": {
+        "platform": "azure",
+        "arch": "x86_64",
+        "ebs-size": 20
+      }
+    }]
+  }
+}

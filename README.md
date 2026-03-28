@@ -8,6 +8,7 @@ Targets:
     help            - 이 도움말 메시지를 출력합니다.
     all             - 모든 과정을 실행합니다.
     lint            - [Phase 2] YANG 모델 검사 및 JSON 검증을 실행합니다.
+    lint-test       - [Phase 2] 에러가 있는 JSON 파일로 YANG 모델 검사를 테스트합니다.
     provision       - [Phase 4] AWS/On-premises 인프라 프로비저닝을 실행합니다.
     bootstrap-test  - [Phase 5] Ansible connectivity를 테스트합니다.
     bootstrap       - [Phase 5] Ansible playbook을 실행하여 bootstrap을 수행합니다.
@@ -149,13 +150,13 @@ yanglint -version
             |  +--rw (platform-spec)
             |     +--:(aws)
             |     |  +--rw instance-type    ct:aws-instance-type
-            |     |  +--rw ebs-size?        uint16
+            |     |  +--rw ebs-size         uint16
             |     +--:(on-premise)
             |        +--rw vcpu      uint8
             |        +--rw memory    uint8
             +--rw network
             |  +--rw ssh-user                string
-            |  +--rw ssh-port?               inet:port-number
+            |  +--rw ssh-port                inet:port-number
             |  +--rw (bootstrap-strategy)
             |     +--:(aws-strategy)
             |     |  +--rw public-ip-required?   boolean
@@ -186,19 +187,18 @@ yanglint -version
 
 ```bash
 for f in 02-inventory/*.json; do \
-	yanglint -p 01-schema -t data 01-schema/hybrid-cloud.yang "$f" > /dev/null 2>&1 && \
-	echo "YANG Lint Pass: $f" || \
-	(echo "YANG Lint Fail: $f" && exit 1); \
+	yanglint -p 01-schema 01-schema/hybrid-cloud.yang "$f" && \
+	echo "✅ YANG Lint Pass: $f" || { echo "❌ YANG Lint Fail: $f" && break; }; \
 done
 ```
 
 ```bash
-YANG Lint Pass: 02-inventory/aws-t4g-node-test-1.json
-YANG Lint Pass: 02-inventory/aws-t4g-node-test-2.json
-YANG Lint Pass: 02-inventory/aws-t4g-node-test-3.json
-YANG Lint Pass: 02-inventory/aws-t4g-node.json
-YANG Lint Pass: 02-inventory/site-a-node.json
-YANG Lint Pass: 02-inventory/site-b-node.json
+✅ YANG Lint Pass: 02-inventory/aws-t4g-node-test-1.json
+✅ YANG Lint Pass: 02-inventory/aws-t4g-node-test-2.json
+✅ YANG Lint Pass: 02-inventory/aws-t4g-node-test-3.json
+✅ YANG Lint Pass: 02-inventory/aws-t4g-node.json
+✅ YANG Lint Pass: 02-inventory/site-a-node.json
+✅ YANG Lint Pass: 02-inventory/site-b-node.json
 ```
 
 ### Step 4. Exception Handling & Constraint Enforcement Scenarios
@@ -210,6 +210,15 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
     ```plain text
     libyang err : Unsatisfied pattern - "t4g.large" does not conform to "[tcrm][1-8][a-z]*\.(nano|micro|small|medium)". (Schema location /hybrid-cloud:cluster/node/compute/platform-spec/aws/instance-type, data location /hybrid-cloud:compute, line number 19.)
     YANGLINT[E]: Failed to parse input data file "02-inventory/aws-t4g-node.json".
+    ❌ YANG Lint Fail: 02-inventory/aws-t4g-node.json
+    ```
+
+* 예시: `platform`과 `instance-type` 간의 불일치
+
+    ```plain text
+    libyang err : Architecture mismatch detected: 'arm64' platform requires 'g' instance types, while 'x86_64' platform cannot use 'g' instance types. (/hybrid-cloud:cluster/node[name='aws-t4g-node-test-1']/compute/instance-type)
+    YANGLINT[E]: Failed to parse input data file "02-inventory/aws-t4g-node-test-1.json".
+    ❌ YANG Lint Fail: 02-inventory/aws-t4g-node-test-1.json
     ```
 
 * 예시: On-Premise 노드에 `public-ip-required`가 `true`로 설정된 경우
@@ -217,7 +226,32 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
     ```plain text
     libyang err : Data for both cases "aws-strategy" and "on-premise-strategy" exist. (Schema location /hybrid-cloud:cluster/node/network/bootstrap-strategy, data location /hybrid-cloud:network, line number 27.)
     YANGLINT[E]: Failed to parse input data file "02-inventory/site-a-node.json".
+    ❌ YANG Lint Fail: 02-inventory/site-a-node.json
     ```
+
+### Step 5. Negative Testing with Intentionally Invalid JSON Files
+
+`make lint-error` 명령을 통해 의도적으로 오류가 있는 JSON 파일을 검사하여, YANG 모델이 예상대로 제약 조건을 강제하는지 검증할 수 있습니다.
+
+* **[error/01-arm-x86-instance.json](./02-inventory/error/01-arm-x86-instance.json):** `arm64` 아키텍처 노드에 `g`가 없는 `x86_64` 전용 인스턴스 타입 (`t3.medium`)이 지정되어 `must` 구문을 위반한 경우
+
+* **[error/02-x86-arm-instance.json](./02-inventory/error/02-x86-arm-instance.json):** `x86_64` 아키텍처 노드에 Graviton (`arm64`) 전용 인스턴스 타입 (`t4g.small`)이 지정되어 must 구문을 위반한 경우
+
+* **[error/03-invalid-platform.json](./02-inventory/error/03-invalid-platform.json):** `common-types`에 정의되지 않은 플랫폼 값 (`azure`)을 입력하여 `enumeration` 타입 제약을 위반한 경우
+
+* **[error/04-ebs-type-mismatch.json](./02-inventory/error/04-ebs-type-mismatch.json):** `uint16` 타입인 `ebs-size` 필드에 숫자가 아닌 문자열 값 (`"100GB"`)을 입력하여 데이터 타입 검증에 실패한 경우
+
+* **[error/05-wrong-case-data.json](./02-inventory/error/05-wrong-case-data.json):** 플랫폼이 `aws`임에도 불구하고 `on-premise` 케이스 전용 필드 (`vcpu`, `memory`)를 포함하여 `when` 조건부 로직을 위반한 경우
+
+* **[error/06-missing-mandatory-choice.json](./02-inventory/error/06-missing-mandatory-choice.json):** `mandatory: true`로 설정된 `platform-spec` 초이스 내의 필수 리프 (`instance-type`)를 누락한 경우
+
+* **[error/07-vcpu-out-of-range.json](./02-inventory/error/07-vcpu-out-of-range.json):** `on-premise` 설정에서 `vcpu` 값을 허용 범위 (`1..8`)를 초과하는 값 (`64`)으로 설정하여 `range` 제약을 위반한 경우
+
+* **[error/08-instance-regex-mismatch.json](./02-inventory/error/08-instance-regex-mismatch.json):** AWS 인스턴스 명명 규칙 패턴 (`[tcrm][1-8]...`)에 맞지 않는 인스턴스 타입 (`p3.2xlarge`)을 입력하여 `re-match `검증에 실패한 경우
+
+* **[error/09-missing-arch.json](./02-inventory/error/09-missing-arch.json):** `compute` 컨테이너 내에서 반드시 존재해야 하는 `arch` 리프를 누락하여 `mandatory` 제약을 위반한 경우
+
+* **[error/10-empty-node.json](./02-inventory/error/10-empty-node.json):** 노드 정의 내에 필수 컨테이너인 `compute`와 `network` 섹션을 모두 누락하여 모델의 최소 구조 요건을 충족하지 못한 경우
 
 ---
 

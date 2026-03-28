@@ -1,0 +1,12 @@
+{
+  "hybrid-cloud:cluster": {
+    "node": [{
+      "name": "err-node-9",
+      "compute": {
+        "platform": "aws",
+        "instance-type": "t3.medium",
+        "ebs-size": 20
+      }
+    }]
+  }
+}

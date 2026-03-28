@@ -21,6 +21,7 @@ help:
 	@echo "  help            - 이 도움말 메시지를 출력합니다."
 	@echo "  all             - 모든 과정을 실행합니다."
 	@echo "  lint            - [Phase 2] YANG 모델 검사 및 JSON 검증을 실행합니다."
+	@echo "  lint-test       - [Phase 2] 에러가 있는 JSON 파일로 YANG 모델 검사를 테스트합니다."
 	@echo "  provision       - [Phase 4] AWS/On-premises 인프라 프로비저닝을 실행합니다."
 	@echo "  bootstrap-test  - [Phase 5] Ansible connectivity를 테스트합니다."
 	@echo "  bootstrap       - [Phase 5] Ansible playbook을 실행하여 bootstrap을 수행합니다."
@@ -42,13 +43,19 @@ all:
 
 # YANG 모델 검사 및 JSON 검증
 lint:
-	@echo "[Phase 2] YANG 모델 검사 및 JSON 검증을 실행합니다..."
-	$(YANGLINT) -f tree $(YANG)/hybrid-cloud.yang
-	@for f in $(JSON)/*.json; do \
-		$(YANGLINT) -p $(YANG) -t data $(YANG)/hybrid-cloud.yang "$$f" > /dev/null 2>&1 && \
-		echo "YANG Lint Pass: $$f" || \
-		(echo "YANG Lint Fail: $$f" && exit 1); \
+	@yanglint -f tree 01-schema/hybrid-cloud.yang
+	@for f in 02-inventory/*.json; do \
+		yanglint -p 01-schema 01-schema/hybrid-cloud.yang "$$f" && \
+		echo "✅ YANG Lint Pass: $$f" || { echo "❌ YANG Lint Fail: $$f" && exit 1; }; \
 	done
+
+# 에러가 있는 JSON 파일로 YANG 모델 검사 테스트
+lint-test:
+	@for f in 02-inventory/error/*.json; do \
+		yanglint -p 01-schema 01-schema/hybrid-cloud.yang "$$f" && \
+		echo "✅ YANG Lint Pass: $$f" || echo "❌ YANG Lint Fail: $$f"; \
+	done
+
 # 인프라 프로비저닝
 provision:
 	@echo "[Phase 4] AWS/On-premises 인프라 프로비저닝을 시작합니다..."

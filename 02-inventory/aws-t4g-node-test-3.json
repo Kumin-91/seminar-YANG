@@ -5,8 +5,8 @@
         "name": "aws-t4g-node-test-3",
         "compute": {
           "platform": "aws",
-          "arch": "arm64",
-          "instance-type": "t4g.nano",
+          "arch": "x86_64",
+          "instance-type": "t3a.nano",
           "ebs-size": 20
         },
         "network": {

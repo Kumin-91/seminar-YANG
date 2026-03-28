@@ -1,0 +1,14 @@
+{
+  "hybrid-cloud:cluster": {
+    "node": [{
+      "name": "err-node-5",
+      "compute": {
+        "platform": "aws",
+        "arch": "x86_64",
+        "ebs-size": 20,
+        "vcpu": 4,
+        "memory": 8
+      }
+    }]
+  }
+}
