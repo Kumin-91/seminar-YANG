@@ -2,11 +2,11 @@
   "hybrid-cloud:cluster": {
     "node": [
       {
-        "name": "aws-t4g-node-test-2",
+        "name": "aws-test-1",
         "compute": {
           "platform": "aws",
-          "arch": "arm64",
-          "instance-type": "t4g.nano",
+          "arch": "x86_64",
+          "instance-type": "t3.nano",
           "ebs-size": 20
         },
         "network": {

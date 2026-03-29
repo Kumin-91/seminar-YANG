@@ -171,11 +171,11 @@ yanglint -version
 
 ### Step 2. Data Instance Modeling: Node-specific JSON Manifests
 
-* ***[`aws-t4g-node-test-1.json`](./02-inventory/aws-t4g-node-test-1.json)**
+* **[`aws-test-1.json`](./02-inventory/aws-test-1.json)**
 
-* **[`aws-t4g-node-test-2.json`](./02-inventory/aws-t4g-node-test-2.json)**
+* **[`aws-test-2.json`](./02-inventory/aws-test-2.json)**
 
-* **[`aws-t4g-node-test-3.json`](./02-inventory/aws-t4g-node-test-3.json)**
+* **[`aws-test-3.json`](./02-inventory/aws-test-3.json)**
 
 * **[`aws-t4g-node.json`](./02-inventory/aws-t4g-node.json)**
 
@@ -193,10 +193,10 @@ done
 ```
 
 ```bash
-✅ YANG Lint Pass: 02-inventory/aws-t4g-node-test-1.json
-✅ YANG Lint Pass: 02-inventory/aws-t4g-node-test-2.json
-✅ YANG Lint Pass: 02-inventory/aws-t4g-node-test-3.json
 ✅ YANG Lint Pass: 02-inventory/aws-t4g-node.json
+✅ YANG Lint Pass: 02-inventory/aws-test-1.json
+✅ YANG Lint Pass: 02-inventory/aws-test-2.json
+✅ YANG Lint Pass: 02-inventory/aws-test-3.json
 ✅ YANG Lint Pass: 02-inventory/site-a-node.json
 ✅ YANG Lint Pass: 02-inventory/site-b-node.json
 ```
@@ -216,9 +216,9 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 * 예시: `platform`과 `instance-type` 간의 불일치
 
     ```plain text
-    libyang err : Architecture mismatch detected: 'arm64' platform requires 'g' instance types, while 'x86_64' platform cannot use 'g' instance types. (/hybrid-cloud:cluster/node[name='aws-t4g-node-test-1']/compute/instance-type)
-    YANGLINT[E]: Failed to parse input data file "02-inventory/aws-t4g-node-test-1.json".
-    ❌ YANG Lint Fail: 02-inventory/aws-t4g-node-test-1.json
+    libyang err : Architecture mismatch detected: 'arm64' platform requires 'g' instance types, while 'x86_64' platform cannot use 'g' instance types. (/hybrid-cloud:cluster/node[name='aws-test-1']/compute/instance-type)
+    YANGLINT[E]: Failed to parse input data file "02-inventory/aws-test-1.json".
+    ❌ YANG Lint Fail: 02-inventory/aws-test-1.json
     ```
 
 * 예시: On-Premise 노드에 `public-ip-required`가 `true`로 설정된 경우
