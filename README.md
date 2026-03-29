@@ -171,13 +171,13 @@ yanglint -version
 
 ### Step 2. Data Instance Modeling: Node-specific JSON Manifests
 
+* ***[`aws-t4g-node-test-1.json`](./02-inventory/aws-t4g-node-test-1.json)**
+
+* **[`aws-t4g-node-test-2.json`](./02-inventory/aws-t4g-node-test-2.json)**
+
+* **[`aws-t4g-node-test-3.json`](./02-inventory/aws-t4g-node-test-3.json)**
+
 * **[`aws-t4g-node.json`](./02-inventory/aws-t4g-node.json)**
-
-* **[`aws-t4g-node-1.json`](./02-inventory/aws-t4g-node-1.json)**
-
-* **[`aws-t4g-node-2.json`](./02-inventory/aws-t4g-node-2.json)**
-
-* **[`aws-t4g-node-3.json`](./02-inventory/aws-t4g-node-3.json)**
 
 * **[`site-a-node.json`](./02-inventory/site-a-node.json)**
 
@@ -247,7 +247,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 * **[error/07-vcpu-out-of-range.json](./02-inventory/error/07-vcpu-out-of-range.json):** `on-premise` 설정에서 `vcpu` 값을 허용 범위 (`1..8`)를 초과하는 값 (`64`)으로 설정하여 `range` 제약을 위반한 경우
 
-* **[error/08-instance-regex-mismatch.json](./02-inventory/error/08-instance-regex-mismatch.json):** AWS 인스턴스 명명 규칙 패턴 (`[tcrm][1-8]...`)에 맞지 않는 인스턴스 타입 (`p3.2xlarge`)을 입력하여 `re-match `검증에 실패한 경우
+* **[error/08-instance-regex-mismatch.json](./02-inventory/error/08-instance-regex-mismatch.json):** AWS 인스턴스 명명 규칙 패턴 (`[tcrm][1-8]...`)에 맞지 않는 인스턴스 타입 (`p3.2xlarge`)을 입력하여 `re-match` 검증에 실패한 경우
 
 * **[error/09-missing-arch.json](./02-inventory/error/09-missing-arch.json):** `compute` 컨테이너 내에서 반드시 존재해야 하는 `arch` 리프를 누락하여 `mandatory` 제약을 위반한 경우
 
