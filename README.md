@@ -481,7 +481,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
     # 인벤토리 스크립트 경로 설정
     inventory = ./inventory/resolver.py
     # SSH 개인 키 파일 경로 설정
-    private_key_file = ~/.ssh/hybrid-cloud_key
+    private_key_file = ../00-key/hybrid-cloud
     # Vault 파일 경로 설정
     vault_password_file = ./.vault_pass
     # SSH 호스트 키 검증 비활성화

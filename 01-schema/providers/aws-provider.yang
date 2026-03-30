@@ -26,7 +26,7 @@ module aws-provider {
 
         leaf public-key-dir {
         type string;
-        default "~/.ssh/hybrid-cloud_key.pub";
+        default "./00-key/hybrid-cloud.pub";
         }
     }
 }
