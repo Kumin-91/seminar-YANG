@@ -6,7 +6,7 @@
         "compute": {
           "platform": "aws",
           "arch": "x86_64",
-          "instance-type": "t3a.nano",
+          "instance-type": "t3.nano",
           "ebs-size": 20
         },
         "network": {

@@ -8,8 +8,8 @@ class InventoryResolver:
     def __init__(self):
         # 프로젝트 구조에 맞게 절대 경로 설정
         self.base_dir = Path(__file__).resolve().parent.parent.parent
-        self.inventory_dir = self.base_dir / "02-inventory"
-        self.tf_state_dir = self.base_dir / "04-provisioning" / "aws"
+        self.inventory_dir = self.base_dir / "02-inventory" / "nodes"
+        self.tf_state_dir = self.base_dir / "04-provisioning" / "aws-node"
         
         # Ansible 인벤토리 초기 구조
         self.inventory = {

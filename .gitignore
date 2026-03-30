@@ -1,4 +1,5 @@
 ### Custom
+00-key/
 storage-client.env
 storage-provider.env
 .terraform/

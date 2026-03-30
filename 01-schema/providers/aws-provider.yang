@@ -1,0 +1,32 @@
+module aws-provider {
+    yang-version 1.1;
+    namespace "urn:hybrid:aws-provider";
+    prefix aws;
+
+    container aws-config {
+        leaf region {
+        type string;
+        default "ap-northeast-2";
+        }
+
+        leaf vpc-cidr {
+        type string;
+        default "10.30.0.0/16";
+        }
+
+        leaf public-subnet-cidr {
+        type string;
+        default "10.30.1.0/24";
+        }
+
+        leaf private-subnet-cidr {
+        type string;
+        default "10.30.2.0/24";
+        }
+
+        leaf public-key-dir {
+        type string;
+        default "~/.ssh/hybrid-cloud_key.pub";
+        }
+    }
+}

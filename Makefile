@@ -12,7 +12,7 @@ SITE_YAML = 05-ansible-bootstrap/site.yml
 
 
 .DEFAULT_GOAL := help
-.PHONY: help all lint provision bootstrap-test bootstrap destroy-aws clean
+.PHONY: help all keygen lint provision bootstrap-test bootstrap aws-destroy aws-clean
 
 # 도움말 출력
 help:
@@ -20,17 +20,20 @@ help:
 	@echo "Targets:"
 	@echo "  help            - 이 도움말 메시지를 출력합니다."
 	@echo "  all             - 모든 과정을 실행합니다."
+	@echo "  keygen          - [Phase 0] SSH 키 페어를 생성합니다."
 	@echo "  lint            - [Phase 2] YANG 모델 검사 및 JSON 검증을 실행합니다."
 	@echo "  lint-test       - [Phase 2] 에러가 있는 JSON 파일로 YANG 모델 검사를 테스트합니다."
 	@echo "  provision       - [Phase 4] AWS/On-premises 인프라 프로비저닝을 실행합니다."
 	@echo "  bootstrap-test  - [Phase 5] Ansible connectivity를 테스트합니다."
 	@echo "  bootstrap       - [Phase 5] Ansible playbook을 실행하여 bootstrap을 수행합니다."
-	@echo "  destroy-aws     - [Phase 4] AWS infrastructure를 제거합니다."
-	@echo "  clean           - [Phase 4] 생성된 파일 및 캐시를 정리합니다."
+	@echo "  aws-destroy     - [Phase 4] AWS infrastructure를 제거합니다."
+	@echo "  aws-clean       - [Phase 4] 생성된 파일 및 캐시를 정리합니다."
 
 # 모든 과정 실행
 all:
 	@echo "모든 과정을 실행합니다..."
+	$(MAKE) keygen
+	@sleep 5
 	$(MAKE) lint
 	@sleep 5
 	$(MAKE) provision
@@ -41,18 +44,31 @@ all:
 	@sleep 5
 	@echo "모든 과정이 완료되었습니다."
 
+# SSH 키 페어 생성
+keygen:
+	@echo "SSH 키 페어를 생성합니다..."
+	@echo "생성된 키는 ./00-key에 저장됩니다"
+	@mkdir -p ./00-key
+	@ssh-keygen -t ed25519 -f ./00-key/hybrid-cloud -N ""
+	@cat ./00-key/hybrid-cloud.pub
+
 # YANG 모델 검사 및 JSON 검증
 lint:
-	@yanglint -f tree 01-schema/hybrid-cloud.yang
-	@for f in 02-inventory/*.json; do \
-		yanglint -p 01-schema 01-schema/hybrid-cloud.yang "$$f" && \
+	@yanglint -f tree 01-schema/nodes/hybrid-cloud.yang
+	@for f in 02-inventory/nodes/*.json; do \
+		yanglint -p 01-schema/nodes 01-schema/nodes/hybrid-cloud.yang "$$f" && \
+		echo "✅ YANG Lint Pass: $$f" || { echo "❌ YANG Lint Fail: $$f" && exit 1; }; \
+	done
+	@yanglint -f tree 01-schema/providers/aws-provider.yang
+	@for f in 02-inventory/providers/*.json; do \
+		yanglint -p 01-schema/providers 01-schema/providers/aws-provider.yang "$$f" && \
 		echo "✅ YANG Lint Pass: $$f" || { echo "❌ YANG Lint Fail: $$f" && exit 1; }; \
 	done
 
 # 에러가 있는 JSON 파일로 YANG 모델 검사 테스트
 lint-test:
 	@for f in 02-inventory/error/*.json; do \
-		yanglint -p 01-schema 01-schema/hybrid-cloud.yang "$$f" && \
+		yanglint -p 01-schema/nodes 01-schema/nodes/hybrid-cloud.yang "$$f" && \
 		echo "✅ YANG Lint Pass: $$f" || echo "❌ YANG Lint Fail: $$f"; \
 	done
 
@@ -72,13 +88,12 @@ bootstrap:
 	ANSIBLE_CONFIG=$(ANSIBLE_CFG) $(ANSIBLE) -i $(RESOLVER) $(SITE_YAML)
 
 # AWS 인프라 제거
-destroy-aws:
+aws-destroy:
 	@echo "[Phase 4] AWS 인프라를 제거합니다..."
 	$(PYTHON) $(REMOVER)
 
 # 생성된 파일 및 캐시 정리
-clean:
+aws-clean:
 	@echo "[Phase 4] 생성된 파일 및 캐시를 정리합니다..."
-	@echo "이 명령어는 destroy-aws가 먼저 실행된 후에 사용되어야 합니다. (Enter로 확인)"; read _
+	@echo "이 명령어는 aws-destroy가 먼저 실행된 후에 사용되어야 합니다. (Enter로 확인)"; read _
 	find . -name "*.tfstate*" -type f -print -delete
-	find . -name "__pycache__" -type d -print -exec rm -rf {} +
