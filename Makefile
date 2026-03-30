@@ -44,12 +44,16 @@ all:
 	@sleep 5
 	@echo "모든 과정이 완료되었습니다."
 
-# SSH 키 페어 생성
+# SSH 키 페어 생성 (이미 존재하면 건너뜀)
 keygen:
-	@echo "SSH 키 페어를 생성합니다..."
-	@echo "생성된 키는 ./00-key에 저장됩니다"
-	@mkdir -p ./00-key
-	@ssh-keygen -t ed25519 -f ./00-key/hybrid-cloud -N ""
+	@if [ -f ./00-key/hybrid-cloud ]; then \
+		echo "✅ ./00-key/hybrid-cloud 키가 이미 존재합니다. 생성을 건너뜁니다."; \
+	else \
+		echo "🚀 SSH 키 페어를 새로 생성합니다..."; \
+		mkdir -p ./00-key; \
+		ssh-keygen -t ed25519 -f ./00-key/hybrid-cloud -N ""; \
+	fi
+	@echo "🔑 현재 사용 중인 공개 키 (./00-key/hybrid-cloud.pub):"
 	@cat ./00-key/hybrid-cloud.pub
 
 # YANG 모델 검사 및 JSON 검증
