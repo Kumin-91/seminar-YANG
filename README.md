@@ -1,4 +1,6 @@
-# One Logical Infrastructure, Many Physical Realities: A YANG-Driven Hybrid Cloud with K3s
+# Model-Driven Infrastructure: A YANG-Based Laboratory
+
+One Logical Infrastructure, Many Physical Realities: A YANG-Driven Hybrid Cloud with K3s
 
 ## How to Use This Repository
 
