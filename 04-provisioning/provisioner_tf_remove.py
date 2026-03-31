@@ -26,7 +26,7 @@ class ProvisionerTFRemove:
         try:
             subprocess.run(command, check=True)
         except subprocess.CalledProcessError as e:
-            print(f"\n❌ 명령어 실행 실패: {command}", file=sys.stderr)
+            print(f"❌ 명령어 실행 실패: {command}", file=sys.stderr)
             exit(1)
 
     def remove_aws_base(self):
@@ -38,7 +38,7 @@ class ProvisionerTFRemove:
             return
         abs_manifest = Path(manifest[0]).resolve()
 
-        print("🗑️ AWS 베이스 인프라 제거 시작", file=sys.stderr)
+        print("🗑️ AWS 베이스 인프라 제거 시작", file=sys.stdout)
         cmd = [
             "terraform",
             f"-chdir={str(self.terraform_base_dir)}",
@@ -59,10 +59,10 @@ class ProvisionerTFRemove:
 
         # 상태 파일이 존재하는지 확인
         if not Path(self.terraform_node_dir / state_file).exists():
-            print(f"⏩ 스킵: {state_file}이 존재하지 않아 이미 제거된 것으로 간주합니다.", file=sys.stderr)
+            print(f"⏩ 스킵: {state_file}이 존재하지 않아 이미 제거된 것으로 간주합니다.", file=sys.stdout)
             return
 
-        print(f"🗑️ AWS 인프라 제거 시작: {node_name} (State: {state_file})", file=sys.stderr)
+        print(f"🗑️ AWS 인프라 제거 시작: {node_name} (State: {state_file})", file=sys.stdout)
         cmd = [
             "terraform",
             f"-chdir={str(self.terraform_node_dir)}",
@@ -81,7 +81,7 @@ class ProvisionerTFRemove:
             print(f"⚠️ {self.inventory_node_dir} 디렉토리에 JSON 파일이 없습니다.", file=sys.stderr)
             return
 
-        print(f"✅ 총 {len(manifests)}개의 노드 설계를 발견했습니다. 작업을 시작합니다.", file=sys.stderr)
+        print(f"✅ 총 {len(manifests)}개의 노드 설계를 발견했습니다. 작업을 시작합니다.", file=sys.stdout)
 
         for manifest_file in manifests:
             try:
@@ -104,6 +104,5 @@ class ProvisionerTFRemove:
             self.aws_base_provisioned = False
 
 if __name__ == "__main__":
-    print("❌ AWS 인프라 제거 스크립트입니다. 이 스크립트는 Terraform을 사용하여 AWS 인프라를 제거합니다.", file=sys.stderr)
     remover = ProvisionerTFRemove()
     remover.orchestrate()

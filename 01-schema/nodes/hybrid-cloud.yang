@@ -11,20 +11,27 @@ module hybrid-cloud {
     container cluster {
         list node {
             key "name";
-            leaf name { type string; }
-            // k3s 역할별 우선순위 정의
-            list role-assignment {
-                key "role";
-                description "이 노드가 수행하는 기술적 역할과 그 전략적 중요도";
-                leaf role {
-                    type ct:k3s-role;
-                    description "기술적 역할 (Server 또는 Agent)";
+            description "클러스터를 구성하는 개별 노드 정보";
+            leaf name { 
+                type string; 
+                description "클러스터 이름";
+            }
+            // After - Kubernetes 구조에 맞게 일반화
+            container k8s-role-assignment {
+                description "이 노드가 수행하는 Kubernetes 역할과 그 부트스트랩 전략";
+                leaf node-role {
+                    type ct:k8s-node-role;
+                    description "Kubernetes 역할";
                 }
-                leaf priority {
-                    type ct:node-role;
-                    description "해당 역할이 클러스터 내에서 갖는 전략적 우선순위";
+                leaf bootstrap-role {
+                    type ct:k8s-bootstrap-role;
+                    must "not(../node-role = 'worker' and . = 'init')" {
+                        error-message "'worker' node cannot have 'init' bootstrap role.";
+                    }
+                    description "부트스트랩 전략";
                 }
-            }   
+            }
+
             // grouping으로 정의된 각 리소스 구성 요소
             uses rc:resource-compute;
             uses rn:resource-network;

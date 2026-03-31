@@ -3,10 +3,10 @@
     "node": [
       {
         "name": "site-b-node",
-        "role-assignment": [
+        "k8s-role-assignment": [
           {
-            "role": "agent",
-            "priority": "secondary"
+            "node-role": "agent",
+            "bootstrap-role": "join"
           }
         ],
         "compute": {

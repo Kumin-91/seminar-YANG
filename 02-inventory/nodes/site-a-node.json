@@ -3,16 +3,10 @@
     "node": [
       {
         "name": "site-a-node",
-        "role-assignment": [
-          {
-            "role": "server",
-            "priority": "secondary"
-          },
-          {
-            "role": "agent",
-            "priority": "primary"
-          }
-        ],
+        "k8s-role-assignment": {
+          "node-role": "control_plane",
+          "bootstrap-role": "init"
+        },
         "compute": {
           "platform": "on-premise",
           "arch": "x86_64",

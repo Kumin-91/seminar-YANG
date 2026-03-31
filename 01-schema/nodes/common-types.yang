@@ -27,17 +27,17 @@ module common-types {
             pattern '[tcrm][1-8][gai]?[dbn]*\.(nano|micro|small|medium)';
         }
     }
-    typedef k3s-role {
+    // After - Kubernetes 구조에 맞게 일반화
+    typedef k8s-node-role {
         type enumeration {
-            enum server;
-            enum agent;
+            enum control_plane;
+            enum worker;
         }
     }
-    typedef node-role {
+    typedef k8s-bootstrap-role {
         type enumeration {
-            enum primary;
-            enum secondary;
-            enum fallback;
+            enum init;
+            enum join;
         }
     }
 }

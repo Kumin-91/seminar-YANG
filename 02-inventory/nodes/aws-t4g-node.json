@@ -3,16 +3,10 @@
     "node": [
       {
         "name": "aws-t4g-node",
-        "role-assignment": [
-          {
-            "role": "server",
-            "priority": "primary"
+        "k8s-role-assignment":{
+            "node-role": "control_plane",
+            "bootstrap-role": "join"
           },
-          {
-            "role": "agent",
-            "priority": "fallback"
-          }
-        ],
         "compute": {
           "platform": "aws",
           "arch": "arm64",

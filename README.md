@@ -66,11 +66,11 @@ cat ./00-key/hybrid-cloud.pub
 
 ### Step 1. Strategic Role Allocation & Infrastructure Hierarchy
 
-| Location | Gateway/Ingress | Control Plane | Worker Node |
+| Location | Node Role | Bootstrap Role | Strategy |
 | --- | --- | --- | --- |
-| **AWS** | Primary | Primary | Fallback |
-| **Site A** | Secondary| Secondary | Primary |
-| **Site B** | ❌ | ❌ | Secondary |
+| **AWS** | control-plane | init | 클러스터의 시드 노드이자 외부 접근 포인트 |
+| **Site A** | control-plane | join | 온프레미스 고가용성을 위한 보조 제어 평면 |
+| **Site B** | worker | join | 전용 워크로드 수행 노드 |
 
 ### Step 2. Hardware Inventory & Compute/Storage Quotas
 
@@ -116,7 +116,7 @@ cat ./00-key/hybrid-cloud.pub
 
 * 개별 리소스 모델을 통합하여 하이브리드 클러스터의 단일 진실 원천 (SSoT)을 구축합니다.
 
-* 각 노드의 기술적 역할뿐만 아니라 클러스터 내의 전략적 우선순위를 함께 관리합니다.
+* 각 노드의 역할 할당 (control-plane, worker)과 부트스트랩 전략 (init, join)을 명세하여, 클러스터 부트스트래핑과 확장 시나리오를 지원합니다.
 
 ### Step 6. Provider-Specific Extensions: [`providers/aws-provider.yang`](./01-schema/providers/aws-provider.yang)
 
@@ -175,10 +175,10 @@ yanglint -version
     module: hybrid-cloud
     +--rw cluster
         +--rw node* [name]
-            +--rw name       string
-            +--rw role-assignment* [role]
-            |  +--rw role        ct:k3s-role
-            |  +--rw priority?   ct:node-role
+            +--rw name                   string
+            +--rw k8s-role-assignment
+            |  +--rw node-role?        ct:k8s-node-role
+            |  +--rw bootstrap-role?   ct:k8s-bootstrap-role
             +--rw compute
             |  +--rw platform           ct:node-platform
             |  +--rw arch               ct:cpu-arch

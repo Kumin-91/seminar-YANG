@@ -27,7 +27,7 @@ class Provisioner:
         try:
             subprocess.run(command, check=True)
         except subprocess.CalledProcessError as e:
-            print(f"\n❌ 명령어 실행 실패: {command}", file=sys.stderr)
+            print(f"❌ 명령어 실행 실패: {command}", file=sys.stderr)
             exit(1)
 
     def provision_aws_base(self):
@@ -40,7 +40,6 @@ class Provisioner:
         abs_manifest = Path(manifest[0]).resolve()
 
         # 프로비저닝
-        print(f"🛠️ AWS 베이스 인프라 프로비저닝 시작", file=sys.stderr)
         cmd = [
             "terraform",
             f"-chdir={str(self.terraform_base_dir)}",
@@ -60,7 +59,6 @@ class Provisioner:
         state_file = f"{node_name}.tfstate"
 
         # 프로비저닝
-        print(f"🛰️ AWS 프로비저닝 시작: {node_name} (State: {state_file})", file=sys.stderr)
         cmd = [
             "terraform",
             f"-chdir={str(self.terraform_node_dir)}",
@@ -74,8 +72,6 @@ class Provisioner:
     def provision_on_premise(self, ssh_host, ssh_port, ssh_user):
         """온프레미스 노드에 SSH 마스터 키를 주입합니다."""
         ssh_key = self.ssh_key_path.resolve()
-
-        print(f"🔑 SSH 키 주입 중: {ssh_user}@{ssh_host}:{ssh_port}", file=sys.stderr)
         cmd = [
             "bash",
             str(self.on_premise_script),
@@ -93,8 +89,6 @@ class Provisioner:
         if not manifests:
             print(f"⚠️ {self.inventory_node_dir} 디렉토리에 JSON 파일이 없습니다.", file=sys.stderr)
             return
-        
-        print(f"✅ 총 {len(manifests)}개의 노드 설계를 발견했습니다. 작업을 시작합니다.", file=sys.stderr)
 
         for manifest_file in manifests:
             try:
@@ -105,8 +99,6 @@ class Provisioner:
                 name = self.get_node_name(manifest_file)
                 node = inventory['hybrid-cloud:cluster']['node'][0]
                 platform = node['compute']['platform']
-
-                print(f"\n--- [프로비저닝 대상: {name} | 플랫폼: {platform}] ---", file=sys.stderr)
 
                 # AWS 베이스 인프라 프로비저닝 (한 번만 실행)
                 if platform == 'aws' and not self.aws_base_provisioned:
@@ -132,6 +124,5 @@ class Provisioner:
                 continue
 
 if __name__ == "__main__":
-    print("🚀 하이브리드 클라우드 인프라 프로비저닝 프로세스 가동", file=sys.stderr)
     provisioner = Provisioner()
     provisioner.orchestrate()
