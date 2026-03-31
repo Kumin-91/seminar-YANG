@@ -19,9 +19,22 @@ Targets:
     aws-clean       - [Phase 4] 생성된 파일 및 캐시를 정리합니다.
 ```
 
-## Tools
+## Tools and Use Cases
 
-[YANG](https://nso-docs.cisco.com/guides/nso-6.2/development/core-concepts/yang) | [CESNET/libyang](https://github.com/CESNET/libyang) | [Terraform](https://developer.hashicorp.com/terraform) | [Ansible](https://docs.ansible.com/)
+| Tool  | Use Case |
+| --- | --- |
+| [![YANG](https://img.shields.io/badge/YANG-Modeling-blue?style=flat-square&logo=gitbook&logoColor=white)](https://nso-docs.cisco.com/guides/nso-6.1/development/core-concepts/yang#d5e1856) | YANG Modeling |
+| [![libyang](https://img.shields.io/badge/libyang-Validation-orange?style=flat-square&logo=c)](https://github.com/CESNET/libyang) | YANG Validation |
+| [![MinIO](https://img.shields.io/badge/MinIO-Storage-white?style=flat-square&logo=minio&logoColor=be212e)](https://min.io/) | Distributed Storage for JuiceFS |
+| [![Redis](https://img.shields.io/badge/Redis-In--Memory-red?style=flat-square&logo=redis&logoColor=white)](https://redis.io/) | In-Memory Database for JuiceFS |
+| [![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?style=flat-square&logo=terraform&logoColor=white)](https://www.terraform.io/) | AWS Infrastructure Provisioning |
+| [![Shell](https://img.shields.io/badge/Shell-Scripting-4EAA25?style=flat-square&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/) | On-Premise Access Bridge |
+| [![Python](https://img.shields.io/badge/Python-Orchestration-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/) |  Unified Orchestration & Dynamic Inventory |
+| [![Ansible](https://img.shields.io/badge/Ansible-Automation-EE0000?style=flat-square&logo=ansible&logoColor=white)](https://docs.ansible.com/) | AWS/On-premises Bootstrap & Secret Management |
+| [![Tailscale](https://img.shields.io/badge/Tailscale-Mesh--VPN-4A63E7?style=flat-square&logo=tailscale&logoColor=white)](https://tailscale.com/) | Unified Mesh Networking |
+| [![JuiceFS](https://img.shields.io/badge/JuiceFS-DFS-00A1E9?style=flat-square&logo=files&logoColor=white)](https://juicefs.com/) | Distributed File System |
+| [![K3s](https://img.shields.io/badge/K3s-Kubernetes-FF6E40?style=flat-square&logo=kubernetes&logoColor=white)](https://k3s.io/) | Lightweight Kubernetes |
+
 ## Table of Contents
 
 [Phase 0. Physical Inventory & Resource Specification](#phase-0-physical-inventory--resource-specification)
@@ -618,8 +631,6 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 * 이는 마운트 전후 양쪽에서 소유권을 검증하는 이중화 전략으로 권한 충돌을 완전히 차단합니다.
 
-<!--
-
 ### Step 5. Ansible Playbook for K3s Cluster Bootstrapping
 
 > K3s 서버와 에이전트 노드 각각에 대한 플레이북을 별도로 작성하여, 역할별로 최적화된 부트스트래핑 과정을 구현합니다.
@@ -637,7 +648,5 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 > 모든 Playbook을 순차적으로 실행하여, 하이브리드 클라우드의 완전한 부트스트래핑을 달성하는 단일 진입점입니다.
 
 > **TBD**
-
--->
 
 ---
