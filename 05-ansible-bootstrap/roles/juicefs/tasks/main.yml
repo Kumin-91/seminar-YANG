@@ -79,7 +79,7 @@
 - name: "7. 연결 성공 메시지 출력"
   ansible.builtin.debug:
     msg: 
-      - "🚀 JuiceFS Mount Success on {{ node_spec.name }}!"
+      - "🚀 JuiceFS Mount Success on {{ inventory_hostname }}!"
       - "📍 Mount Point: {{ storage_info.mount_point }}"
       - "📊 Cache Config: {{ storage_info.cache_size }}GB"
       - "🔗 Backend: {{ storage_info.s3_url }}"

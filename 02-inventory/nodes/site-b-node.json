@@ -3,25 +3,23 @@
     "node": [
       {
         "name": "site-b-node",
-        "k8s-role-assignment": [
-          {
-            "node-role": "agent",
-            "bootstrap-role": "join"
-          }
-        ],
+        "k8s-role-assignment": {
+          "node-role": "worker",
+          "bootstrap-role": "join"
+        },
         "compute": {
           "platform": "on-premise",
           "arch": "x86_64",
-          "vcpu": 2,
-          "memory": 4
+          "vcpu": 4,
+          "memory": 8
         },
         "network": {
           "ssh-user": "sttb",
-          "ssh-port": 30022,
-          "bootstrap-ip": "100.100.1.253"
+          "ssh-port": 22,
+          "bootstrap-ip": "192.168.1.203"
         },
         "storage": {
-          "s3-endpoint": "s3.example.com",
+          "s3-endpoint": "s3.aoimiu.com",
           "redis-endpoint": "100.100.1.254:4279",
           "cache-size": 20
         }

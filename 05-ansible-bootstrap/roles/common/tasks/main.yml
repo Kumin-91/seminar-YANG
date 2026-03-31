@@ -2,13 +2,13 @@
   block:
     - name: "호스트네임 적용"
       ansible.builtin.hostname:
-        name: "{{ node_spec.name }}"
+        name: "{{ inventory_hostname }}"
 
     - name: "로컬 호스트네임을 /etc/hosts에 등록"
       ansible.builtin.lineinfile:
         path: /etc/hosts
         regexp: '^127\.0\.1\.1'
-        line: "127.0.1.1 {{ node_spec.name }}"
+        line: "127.0.1.1 {{ inventory_hostname }}"
 
     - name: "DNS 설정 강제 주입"
       ansible.builtin.copy:

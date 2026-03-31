@@ -3,7 +3,7 @@
     "node": [
       {
         "name": "aws-t4g-node",
-        "k8s-role-assignment":{
+        "k8s-role-assignment": {
             "node-role": "control_plane",
             "bootstrap-role": "join"
           },

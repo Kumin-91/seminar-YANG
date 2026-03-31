@@ -116,6 +116,7 @@ class InventoryResolver:
 
                 # Ansible 호스트 변수 설정
                 self.inventory['_meta']['hostvars'][name] = {
+                    "node_spec": node.get('compute'),
                     "ansible_host": ansible_host,
                     "ansible_port": network.get('ssh-port', 22),
                     "ansible_user": network.get('ssh-user', 'sttb'),

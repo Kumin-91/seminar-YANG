@@ -78,7 +78,7 @@ cat ./00-key/hybrid-cloud.pub
 | --- | --- | --- | --- | --- | --- | --- |
 | **AWS** | Dynamic | 22 | t4g.medium | arm64 | Yes | 5GB EBS |
 | **Site A** | 192.168.1.202 | 22 | 4 vCPU / 8GB RAM | x86_64 | No | 30GB NVME |
-| **Site B** | 100.100.1.253 | 30022 | 2 vCPU / 4GB RAM | x86_64 | No | 20GB SSD |
+| **Site B** | 192.168.1.203 | 22 | 4 vCPU / 8GB RAM | x86_64 | No | 20GB SSD |
 
 > AWS의 IP 주소는 Terraform 프로비저닝 후 동적으로 할당됩니다.
 
@@ -337,11 +337,11 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 * JSON 인벤토리를 `jsondecode`로 해석하여 YANG 모델이 정의한 명세를 동적으로 추출합니다.
 
-* 설계도의 변경 사항이 인프라 설정에 즉시 반영되는 유연한 데이터 파이프라인을 구축합니다
+* 설계도의 변경 사항이 인프라 설정에 즉시 반영되는 유연한 데이터 파이프라인을 구축합니다.
 
 #### 2. [`aws-base/main.tf`](./04-provisioning/aws-base/main.tf)
 
-* `local.region`을 통해 실행 리전을 동적으로 선언하고 `pathexpand`로 SSH 키 경로의 호환성을 확보합니다
+* `local.region`을 통해 실행 리전을 동적으로 선언하고 `pathexpand`로 SSH 키 경로의 호환성을 확보합니다.
 
 #### 3. [`aws-base/network.tf`](./04-provisioning/aws-base/network.tf)
 
@@ -461,9 +461,9 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 #### 1. Multi-State Data Aggregator
 
-* `.tfstate` 파일을 전부 탐색하여, AWS에서 프로비저닝된 노드들의 공인 IP 주소를 하나의 Map으로 집계합니다.
+* `.tfstate` 파일을 탐색하여 AWS에서 프로비저닝된 노드들의 공인 IP 주소를 하나의 Map으로 집계합니다.
 
-* 노드가 추가되거나 제거가 되더라도, 실행 시점의 Terraform 상태를 반영하므로 항상 최신의 인벤토리를 유지할 수 있습니다.
+* 노드가 추가되거나 제거되더라도, 실행 시점의 Terraform 상태를 반영하므로 항상 최신의 인벤토리를 유지할 수 있습니다.
 
 #### 2. Architectural Intent & Design Principles
 
@@ -543,9 +543,9 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 #### 1. Tailscale 설치 스크립트 실행 & 현재 상태 체크
 
-* Tailscale 공식 설치 스크립트를 활용하여, Amazon Linux (ARM64)와 Debian (x86_64) 등 서로 다른 플랫폼과 아키텍처에 상관없이 일관된 설치 과정을 보장합니다.
+* Tailscale 공식 설치 스크립트를 활용하여, Amazon Linux (ARM64)와 Debian (x86_64) 등 서로 다른 플랫폼과 아키텍처에 상관없이 일관된 설치 과정을 제공합니다.
 
-* `creates: /usr/sbin/tailscale` 옵션을 통해 이미 설치된 노드에서는 중복 실행을 방지하는 멱등성을 확보했습니다.
+* `creates: /usr/sbin/tailscale` 옵션을 통해 이미 설치된 노드에서의 중복 실행을 방지하여 멱등성을 확보합니다.
 
 * `tailscale status --json` 명령을 통해 현재 노드의 연결 상태를 JSON 형식으로 파악합니다.
 
@@ -561,9 +561,11 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 * 리졸버에서 추출한 `{{ node_spec.name }}`을 호스트네임으로 지정하여, Tailscale 대시보드 내에서 노드 식별을 명확히 합니다.
 
-* 네트워크 가입 후 할당된 `100.64.0.0/16` 대역의 사설 IP 주소를 `tailscale ip -4` 명령으로 실시간 확인합니다.
+* 네트워크 가입 후 할당된 `100.64.0.0/10` 대역의 사설 IP 주소를 `tailscale ip -4` 명령으로 실시간 확인합니다.
 
-* 연결이 완료될 때까지 최대 5회 재시도를 수행하여, 네트워크 인터페이스가 활성화되는 물리적 시간을 안정적으로 확보합니다.
+* 연결이 완료될 때까지 최대 5회 재시도를 수행하여, 네트워크 인터페이스가 활성화되는 데 필요한 물리적 시간을 충분히 확보합니다.
+
+* `ansible.builtin.set_fact` 모듈을 활용하여, 노드의 Tailscale IP 주소를 `ts_ip` 변수로 저장한 후 이후 플레이북에서 참조할 수 있게 합니다.
 
 ### Step 4. Ansible Playbook for JuiceFS Setup: [`roles/juicefs/tasks/main.yml`](./05-ansible-bootstrap/roles/juicefs/tasks/main.yml)
 
@@ -571,7 +573,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 #### 1. JuiceFS 설치 스크립트 실행 & 마운트 디렉토리 생성
 
-* JuiceFS 공식 설치 스크립트를 활용하여, Amazon Linux (ARM64)와 Debian (x86_64) 등 서로 다른 플랫폼과 아키텍처에 상관없이 일관된 설치 과정을 보장합니다.
+* JuiceFS 공식 설치 스크립트를 활용하여, Amazon Linux (ARM64)와 Debian (x86_64) 등 서로 다른 플랫폼과 아키텍처에 상관없이 일관된 설치 과정을 제공합니다.
 
 * `juicefs_bin_path` 변수와 Ansible의 `creates` 옵션을 결합하여, 이미 바이너리가 존재하는 노드에서의 불필요한 재설치를 방지합니다.
 
@@ -617,13 +619,13 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 * [`roles/juicefs/templates/juicefs-mount.service.j2`](./05-ansible-bootstrap/roles/juicefs/templates/juicefs-mount.service.j2)를 통해 각 노드별 환경 변수와 경로가 주입된 유닛 파일을 생성합니다.
 
-* 생성된 서비스를 시스템에 등록 및 시작하여, 노드 재부팅 시에도 별도의 수동 개입 없이 JuiceFS 볼륨이 자동으로 마운트되도록 구성합니다.
+* 생성된 서비스를 시스템에 등록 및 시작하여, 노드 재부팅 시에도 JuiceFS 볼륨이 자동으로 마운트되도록 구성합니다.
 
 #### 5. JuiceFS 상태 및 연결 확인
 
 * 마운트 완료 후 `df -h {{ storage_info.mount_point }}` 명령을 통해 실제 파일 시스템이 마운트 포인트에 정상적으로 연결되었는지 검증합니다.
 
-* 마운트 서비스 시작 후 물리적 시간이 필요하므로, 최대 5회 재시도 (5초 간격)를 설정하여 안정적인 검증을 보장합니다.
+* 마운트 서비스 시작 후 물리적 시간이 필요하므로, 최대 5회 재시도 (5초 간격)를 설정하여 안정적인 검증을 수행합니다.
 
 #### 6. JuiceFS 마운트 후 소유권 강제 재적용
 
@@ -633,20 +635,66 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 5. Ansible Playbook for K3s Cluster Bootstrapping
 
-> K3s 서버와 에이전트 노드 각각에 대한 플레이북을 별도로 작성하여, 역할별로 최적화된 부트스트래핑 과정을 구현합니다.
+> MDI (Model-Driven Infrastructure) 설계에 따라 분류된 그룹 (`control_plane`, `worker`)과 전략 (`init`, `join`)을 바탕으로, 하이브리드 환경에 최적화된 K3s 클러스터를 선언적으로 구축합니다.
 
-#### 1. Playbook for Server: [`roles/k3s-server/tasks/main.yml`](./05-ansible-bootstrap/roles/k3s-server/tasks/main.yml)
+#### 0. Network Integration Strategy: Tailscale Backbone
 
-> **TBD**
+물리적 위치 (On_Premise/AWS)에 관계없이 모든 노드는 Tailscale Mesh 네트워크를 통해 하나의 논리적 서브넷으로 통합됩니다. 이를 위해 모든 부트스트래핑 과정에서 다음 설정을 강제합니다.
 
-#### 2. Playbook for Agent: [`roles/k3s-agent/tasks/main.yml`](./05-ansible-bootstrap/roles/k3s-agent/tasks/main.yml)
+* **고정 엔드포인트 (`ts_ip`):** 리졸버가 추출한 `tailscale0` 인터페이스의 IP를 모든 노드의 대표 주소로 활용합니다.
 
-> **TBD**
+* **통신 인터페이스 표준화:** K3s의 내부 통신 및 Flannel CNI가 물리 인터페이스가 아닌 `tailscale0`를 바라보도록 설정하여 하이브리드 환경에서의 통신 안정성을 확보합니다.
+
+* **핵심 구성 플래그:** 모든 설치 스크립트에는 네트워크 경계를 허물고 보안을 강화하기 위한 다음 파라미터가 공통으로 포함됩니다
+
+    ```bash
+    # K3s 노드 통신 및 인터페이스 고정 설정
+    --node-ip={{ ts_ip }} \
+    --node-external-ip={{ ts_ip }} \
+    --flannel-iface=tailscale0 \
+    --write-kubeconfig-mode=644
+    ```
+
+#### 1. Playbook for Controller: [`roles/k3s-controller/tasks/main.yml`](./05-ansible-bootstrap/roles/k3s-controller/tasks/main.yml)
+
+* **Cluster Seed (`k8s_init`):**
+
+    * On_Premise (site-a-node)를 클러스터의 기점으로 삼아 내장 `etcd`를 초기화합니다.
+
+    * `--cluster-init` 플래그를 통해 고가용성 아키텍처의 초석을 다지며, 부트스트래핑 성공 후 생성된 Cluster Token을 안전하게 추출 (`slurp`)하여 전역 변수화합니다.
+
+* **HA Expansion (`k8s_join`):**
+
+    * AWS (`aws-t4g-node`) 등 추가 컨트롤 플레인 노드를 시드 노드에 합류시킵니다.
+
+    * `hostvars`를 통해 공유된 시드 노드의 Tailscale IP와 Token을 활용하여 물리적 위치에 관계없이 논리적 제어 계층을 확장합니다.
+
+#### 2. Playbook for Worker: [`roles/k3s-worker/tasks/main.yml`](./05-ansible-bootstrap/roles/k3s-worker/tasks/main.yml)
+
+* **Compute Expansion:** 컨트롤 플레인 구축 직후, 시드 노드의 접속 정보 (`seed_node_ip`)와 보안 토큰 (`cluster_token`)을 주입받아 연산 전용 노드 (`site-b-node`)를 클러스터에 가입시킵니다.
+
+* **Agent-Only Mode:** `k3s agent` 명령어를 통해 제어 오버헤드를 최소화하고 순수 연산 자원만 확보합니다. 모든 Pod 간 통신은 `tailscale0` 인터페이스를 강제하여 인터넷 망 노출 없이 안전한 하이브리드 데이터 플레인을 형성합니다.
 
 ### Step 6. Master Orchestration Entrypoint: [`site.yml`](./05-ansible-bootstrap/site.yml)
 
-> 모든 Playbook을 순차적으로 실행하여, 하이브리드 클라우드의 완전한 부트스트래핑을 달성하는 단일 진입점입니다.
+> 개별적으로 작성된 모든 Playbook을 논리적 선후 관계에 따라 순차 실행하여, 하이브리드 클라우드의 완전한 부트스트래핑을 달성하는 단일 진입점입니다.
 
-> **TBD**
+#### Step 1. Infrastructure Startup & Network Fabrication
+
+* `common`과 `tailscale` 플레이북을 동시 실행하여 모든 노드를 메시 네트워크로 묶습니다.
+
+* `resolver`의 `has_storage` 메타데이터에 따라 JuiceFS 마운트 여부를 동적으로 결정하며 기초 구성을 완료합니다.
+
+#### Step 2. Building the Control Plane: Seed Node Initialization & HA Expansion
+
+* `k3s-controller` 플레이북을 실행합니다. 이 단계의 핵심은 데이터의 흐름입니다.
+
+* `k8s_init` 노드가 생성한 클러스터 기점 (Seed) 정보를 `hostvars`로 추출하여, 지연 실행되는 `k8s_join` 노드들에게 안전하게 전달합니다.
+
+#### Step 3. Expanding the Compute Layer: Worker Node Integration
+
+* 완성된 Control Plane 위로 Worker 노드들을 정렬시킵니다.
+
+* 모든 작업이 완료되면 `post_tasks`를 통해 각 노드의 상태 (플랫폼, 아키텍처, IP 등)를 요약 출력하며 하이브리드 클라우드의 성공적 통합을 선언합니다.
 
 ---
