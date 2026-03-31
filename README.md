@@ -193,12 +193,12 @@ yanglint -version
 
     ```bash
     module: aws-provider
-        +--rw aws-config
-            +--rw region?                string
-            +--rw vpc-cidr?              string
-            +--rw public-subnet-cidr?    string
-            +--rw private-subnet-cidr?   string
-            +--rw public-key-dir?        string
+    +--rw aws-config
+        +--rw region?                string
+        +--rw vpc-cidr?              inet:ipv4-prefix
+        +--rw public-subnet-cidr?    inet:ipv4-prefix
+        +--rw private-subnet-cidr?   inet:ipv4-prefix
+        +--rw public-key-dir?        string
     ```
 
 ### Step 2. Data Instance Modeling: Node-specific JSON Manifests
