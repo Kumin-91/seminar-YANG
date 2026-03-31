@@ -267,7 +267,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 5. Negative Testing with Intentionally Invalid JSON Files
 
-`make lint-error` 명령을 통해 의도적으로 오류가 있는 JSON 파일을 검사하여, YANG 모델이 예상대로 제약 조건을 강제하는지 검증할 수 있습니다.
+`make lint-test` 명령을 통해 의도적으로 오류가 있는 JSON 파일을 검사하여, YANG 모델이 예상대로 제약 조건을 강제하는지 검증할 수 있습니다.
 
 * **[error/01-arm-x86-instance.json](./02-inventory/error/01-arm-x86-instance.json):** `arm64` 아키텍처 노드에 `g`가 없는 `x86_64` 전용 인스턴스 타입 (`t3.medium`)이 지정되어 `must` 구문을 위반한 경우
 
@@ -462,7 +462,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 * Ansible의 Dynamic Inventory 규격에 맞춘 JSON 출력을 생성하여, `_meta` 정보를 포함한 데이터를 생성합니다.
 
-* `aws`, `on-premise`, `server`, `agent` 등의 논리적 그룹핑을 자동으로 생성하여, 플레이북에서 유연하게 타겟팅할 수 있도록 지원합니다.
+* `aws`, `on_premise`, `server`, `agent` 등의 논리적 그룹핑을 자동으로 생성하여, 플레이북에서 유연하게 타겟팅할 수 있도록 지원합니다.
 
 #### 4. Operational Transparency
 
@@ -492,6 +492,10 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
     interpreter_python = auto_silent
     # 출력 형식 설정 (YAML)
     stdout_callback = ansible.builtin.default
+    # 콜백 플러그인 설정 (YAML)
+    bin_ansible_callbacks = True
+    # Ansible이 수집한 사실을 변수로 주입하지 않도록 설정
+    inject_facts_as_vars = False
 
     [ssh_connection]
     # SSH 연결 최적화 설정
@@ -512,7 +516,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 * 외부 저장소 및 API 통신을 위해 신뢰할 수 있는 DNS 설정을 강제 주입하여 `apt`/`dnf` 업데이트의 안정성을 확보합니다. 
 
-* `os_family` 및 `distribution` 팩트를 활용하여 OS별로 최적화된 필수 도구 (`jq`, `curl`, `vim`)를 설치합니다.
+* `os_family` 및 `distribution` 팩트를 활용하여 OS별로 [`roles/common/vars/main.yml`](./05-ansible-bootstrap/roles/common/vars/main.yml)에 정의된 패키지를 설치합니다.
 
 * **Amazon Linux 대응**
 
@@ -524,45 +528,97 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 > 모든 노드가 하나의 Overlay 네트워크로 연결하기 위한 Tailscale 설치 및 초기 설정을 담당합니다.
 
-#### 1. Tailscale 설치 스크립트 실행
+#### 1. Tailscale 설치 스크립트 실행 & 현재 상태 체크
 
 * Tailscale 공식 설치 스크립트를 활용하여, Amazon Linux (ARM64)와 Debian (x86_64) 등 서로 다른 플랫폼과 아키텍처에 상관없이 일관된 설치 과정을 보장합니다.
 
 * `creates: /usr/sbin/tailscale` 옵션을 통해 이미 설치된 노드에서는 중복 실행을 방지하는 멱등성을 확보했습니다.
 
-#### 2. Tailscale 현재 상태 체크
+* `tailscale status --json` 명령을 통해 현재 노드의 연결 상태를 JSON 형식으로 파악합니다.
 
-* `tailscale status` 명령을 통해 현재 노드의 연결 상태를 사전에 파악합니다.
+* 응답 JSON의 `BackendState` 필드가 `"Running"`이 아닌 경우에만 `tailscale up`을 실행하도록 조건화하여, 이미 네트워크에 가입된 노드에 불필요한 가입 요청을 방지합니다.
 
-* 이미 네트워크에 가입된 노드에 불필요한 가입 요청 (`tailscale up`)을 보내지 않도록 로직을 보호합니다.
-
-#### 3. Tailscale 서비스 활성화 및 시작
+#### 2. Tailscale 서비스 활성화 및 시작 & IPv4 주소 확인
 
 * `ansible-vault`로 암호화된 인증 키를 활용하며, `no_log: true` 설정을 통해 민감한 키 정보가 앤서블 실행 로그에 남지 않도록 보안을 강화했습니다.
 
-* `tailscale up` 명령을 실행하여, 노드를 Tailscale 네트워크에 연결합니다.
+* `BackendState != "Running"` 조건에 따라 선택적으로 `tailscale up` 명령을 실행하여, 노드를 Tailscale 네트워크에 연결합니다.
 
 * `--authkey {{ tailscale_auth_key }}` 옵션을 주입하여 수동 인증 과정 없는 완전 자동화된 네트워크 가입을 실현합니다.
 
 * 리졸버에서 추출한 `{{ node_spec.name }}`을 호스트네임으로 지정하여, Tailscale 대시보드 내에서 노드 식별을 명확히 합니다.
 
-#### 4. Tailscale IPv4 주소 확인
-
 * 네트워크 가입 후 할당된 `100.64.0.0/16` 대역의 사설 IP 주소를 `tailscale ip -4` 명령으로 실시간 확인합니다.
 
 * 연결이 완료될 때까지 최대 5회 재시도를 수행하여, 네트워크 인터페이스가 활성화되는 물리적 시간을 안정적으로 확보합니다.
-
-#### 5. 연결 성공 메시지 출력
-
-* 모든 부트스트랩 과정이 완료되면 각 노드의 이름과 고유한 Tailscale IP를 출력합니다.
-
-<!--
 
 ### Step 4. Ansible Playbook for JuiceFS Setup: [`roles/juicefs/tasks/main.yml`](./05-ansible-bootstrap/roles/juicefs/tasks/main.yml)
 
 > JuiceFS 클라이언트 설치 및 S3/Redis 엔드포인트 연결을 담당합니다.
 
-> **TBD**
+#### 1. JuiceFS 설치 스크립트 실행 & 마운트 디렉토리 생성
+
+* JuiceFS 공식 설치 스크립트를 활용하여, Amazon Linux (ARM64)와 Debian (x86_64) 등 서로 다른 플랫폼과 아키텍처에 상관없이 일관된 설치 과정을 보장합니다.
+
+* `juicefs_bin_path` 변수와 Ansible의 `creates` 옵션을 결합하여, 이미 바이너리가 존재하는 노드에서의 불필요한 재설치를 방지합니다.
+
+* 설치 완료 후 `{{ juicefs_bin_path }} --version` 명령을 실행하여 JuiceFS 바이너리가 정상적으로 설치되었는지 검증합니다.
+
+* `ansible_user`를 기준으로 마운트 디렉토리를 생성하고, 소유권을 사전에 설정하여 이후 프로세스에서 발생할 수 있는 권한 충돌을 예방합니다.
+
+#### 2. JuiceFS 파일 시스템 포맷
+
+* JSON 인벤토리의 S3/Redis 정보를 기반으로 `juicefs format` 명령을 실행합니다:
+
+    ```bash
+    {{ juicefs_bin_path }} format \
+        --storage s3 \
+        --bucket "{{ storage_info.s3_url }}/jfs" \
+        --access-key "{{ minio_root_user }}" \
+        --secret-key "{{ minio_root_password }}" \
+        "redis://:{{ redis_password }}@{{ storage_info.redis_url }}/0" \
+        "{{ jfs_name | default('hybrid-cloud-jfs') }}"
+    ```
+
+    * `--storage s3`: MinIO S3 호환 스토리지 백엔드 지정
+
+    * `--bucket "{{ storage_info.s3_url }}/jfs"`: S3 버킷 경로 설정
+
+    * `--access-key "{{ minio_root_user }}"`: MinIO 접근 키 주입
+
+    * `--secret-key "{{ minio_root_password }}"`: MinIO 비밀 키 주입
+
+    * `redis://:{{ redis_password }}@{{ storage_info.redis_url }}/0`: Redis 메타데이터 엔진 연결 URI (DB 0)
+    
+    * `{{ jfs_name | default('hybrid-cloud-jfs') }}`: 파일 시스템 이름 (기본값: hybrid-cloud-jfs)
+
+* `failed_when` 조건을 상세화하여, "already exists" 메시지가 포함된 에러는 정상으로 간주함으로써 기존 파일 시스템을 보호하고 멱등성을 유지합니다.
+
+#### 3. FUSE: 타 사용자 접근 허용 설정
+
+* `/etc/fuse.conf`에 `allow_other` 옵션을 주입하여 root 이외의 일반 사용자나 애플리케이션 프로세스가 마운트된 볼륨에 접근할 수 있도록 설정합니다.
+
+* 해당 설정은 다중 사용자 환경에서 JuiceFS를 애플리케이션 스토리지로 활용하기 위한 필수 전제 조건입니다.
+
+#### 4. Jinja2 서비스 템플릿 배포 & JuiceFS 마운트 서비스 시작 및 활성화
+
+* [`roles/juicefs/templates/juicefs-mount.service.j2`](./05-ansible-bootstrap/roles/juicefs/templates/juicefs-mount.service.j2)를 통해 각 노드별 환경 변수와 경로가 주입된 유닛 파일을 생성합니다.
+
+* 생성된 서비스를 시스템에 등록 및 시작하여, 노드 재부팅 시에도 별도의 수동 개입 없이 JuiceFS 볼륨이 자동으로 마운트되도록 구성합니다.
+
+#### 5. JuiceFS 상태 및 연결 확인
+
+* 마운트 완료 후 `df -h {{ storage_info.mount_point }}` 명령을 통해 실제 파일 시스템이 마운트 포인트에 정상적으로 연결되었는지 검증합니다.
+
+* 마운트 서비스 시작 후 물리적 시간이 필요하므로, 최대 5회 재시도 (5초 간격)를 설정하여 안정적인 검증을 보장합니다.
+
+#### 6. JuiceFS 마운트 후 소유권 강제 재적용
+
+* FUSE 마운트 프로세스 중에 소유권이 root로 변경되는 시스템적 현상을 방지하기 위해, Ansible `file` 모듈을 활용하여 마운트 완료 후에도 `ansible_user` 소유권과 권한 (`0770`)을 재강제합니다.
+
+* 이는 마운트 전후 양쪽에서 소유권을 검증하는 이중화 전략으로 권한 충돌을 완전히 차단합니다.
+
+<!--
 
 ### Step 5. Ansible Playbook for K3s Cluster Bootstrapping
 

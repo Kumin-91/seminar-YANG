@@ -1,33 +1,42 @@
-- name: "1. Tailscale 설치 스크립트 실행"
-  ansible.builtin.shell: |
-    curl -fsSL https://tailscale.com/install.sh | sh
-  args:
-    creates: /usr/sbin/tailscale
+- name: "1. Tailscale 설치 스크립트 실행 및 설치 확인"
+  block:
+    - name: "설치 스크립트 실행"
+      ansible.builtin.shell: |
+        curl -fsSL https://tailscale.com/install.sh | sh
+      args:
+        creates: /usr/sbin/tailscale
 
-- name: "2. Tailscale 현재 상태 체크"
-  ansible.builtin.command: tailscale status
-  register: tailscale_status
-  failed_when: false
-  changed_when: false
+    - name: "현재 상태 체크"
+      ansible.builtin.command: tailscale status --json
+      register: tailscale_status
+      failed_when: false
+      changed_when: false
+  become: yes
 
-- name: "3. Tailscale 서비스 활성화 및 시작"
-  ansible.builtin.shell: |
-    tailscale up \
-      --authkey {{ tailscale_auth_key }} \
-      --hostname {{ node_spec.name }} \
-      --accept-routes=false \
-      --accept-dns=false
-  when: tailscale_status.stdout.find('active') == -1 or tailscale_status.rc != 0
-  no_log: true
+- name: "2. Tailscale 서비스 활성화 및 시작"
+  block:
+    - name : "서비스 시작"
+      ansible.builtin.shell: |
+        tailscale up \
+          --authkey {{ tailscale_auth_key }} \
+          --hostname {{ node_spec.name }} \
+          --accept-routes=false \
+          --accept-dns=false \
+          --reset
+      when: (tailscale_status.stdout | from_json).BackendState != "Running"
+      no_log: true
 
-- name: "4. Tailscale IPv4 주소 확인"
-  ansible.builtin.command: tailscale ip -4
-  register: tailscale_ip
-  changed_when: false
-  until: tailscale_ip.rc == 0
-  retries: 5
-  delay: 2
+    - name: "IPv4 주소 확인"
+      ansible.builtin.command: tailscale ip -4
+      register: tailscale_ip
+      changed_when: false
+      until: tailscale_ip.rc == 0
+      retries: 5
+      delay: 2
+  become: yes
 
-- name: "5. 연결 성공 메시지 출력"
+- name: "3. 연결 성공 메시지 출력"
   ansible.builtin.debug:
-    msg: "노드 '{{ node_spec.name }}'이(가) Tailscale 네트워크에 연결되었습니다. IP: {{ tailscale_ip.stdout }}"
+    msg: 
+      - "🚀 Tailscale connected on {{ node_spec.name }}!"
+      - "🌐 IP: {{ tailscale_ip.stdout }}"

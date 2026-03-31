@@ -1,56 +1,44 @@
-- name: "호스트네임 적용"
-  ansible.builtin.hostname:
-    name: "{{ node_spec.name }}"
+- name: "1. 시스템 기본 설정 (Hostname & DNS)"
+  block:
+    - name: "호스트네임 적용"
+      ansible.builtin.hostname:
+        name: "{{ node_spec.name }}"
 
-- name: "로컬 호스트네임을 /etc/hosts에 등록"
-  ansible.builtin.lineinfile:
-    path: /etc/hosts
-    regexp: '^127\.0\.1\.1'
-    line: "127.0.1.1 {{ node_spec.name }}"
-    owner: root
-    group: root
-    mode: '0644'
+    - name: "로컬 호스트네임을 /etc/hosts에 등록"
+      ansible.builtin.lineinfile:
+        path: /etc/hosts
+        regexp: '^127\.0\.1\.1'
+        line: "127.0.1.1 {{ node_spec.name }}"
+
+    - name: "DNS 설정 강제 주입"
+      ansible.builtin.copy:
+        dest: /etc/resolv.conf
+        content: "nameserver 1.1.1.1\n"
   become: yes
 
-- name: "DNS 설정 강제 주입"
-  ansible.builtin.copy:
-    dest: /etc/resolv.conf
-    content: |
-      nameserver 1.1.1.1
-    owner: root
-    group: root
-    mode: '0644'
+- name: "2. 필수 도구 설치"
+  block:
+  - name: "RedHat/Rocky"
+    ansible.builtin.dnf:
+      name: "{{ base_packages }}"
+      state: present
+    when: 
+      - ansible_facts['os_family'] == "RedHat"
+      - ansible_facts['distribution'] != "Amazon"
+
+  - name: "Amazon Linux 2023"
+    ansible.builtin.dnf:
+      name: "{{ base_packages }}"
+      state: present
+      allowerasing: yes
+    when: 
+      - ansible_facts['os_family'] == "RedHat"
+      - ansible_facts['distribution'] == "Amazon"
+
+  - name: "Debian/Ubuntu"
+    ansible.builtin.apt:
+      name: "{{ base_packages }}"
+      state: present
+      update_cache: yes 
+    when: ansible_facts['os_family'] == "Debian"
   become: yes
-
-- name: "필수 도구 설치 (RedHat/Rocky 계열)"
-  ansible.builtin.dnf:
-    name:
-      - jq
-      - curl
-      - vim
-    state: present
-  when: 
-    - ansible_facts['os_family'] == "RedHat"
-    - ansible_facts['distribution'] != "Amazon"
-
-- name: "필수 도구 설치 및 curl 충돌 해결 (Amazon Linux)"
-  ansible.builtin.dnf:
-    name:
-      - jq
-      - curl
-      - vim
-    state: present
-    allowerasing: yes
-  when: 
-    - ansible_facts['os_family'] == "RedHat"
-    - ansible_facts['distribution'] == "Amazon"
-
-- name: "필수 도구 설치 (Debian/Ubuntu 계열)"
-  ansible.builtin.apt:
-    name:
-      - jq
-      - curl
-      - vim
-    state: present
-    update_cache: yes 
-  when: ansible_facts['os_family'] == "Debian"

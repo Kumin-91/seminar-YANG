@@ -3,21 +3,47 @@
   hosts: all
   become: yes
   gather_facts: yes
+  any_errors_fatal: true 
 
   vars_files:
     - group_vars/all/tailscale.yml
+    - group_vars/all/juicefs.yml
 
+  pre_tasks:
+    - name: "[Validation] 모델 데이터 (node_spec) 무결성 확인"
+      # 리졸버가 생성한 데이터가 정상인지 사전에 검증합니다.
+      ansible.builtin.assert:
+        that:
+          - node_spec.name is defined
+          - node_spec.compute.platform is defined
+        fail_msg: "❌ 리졸버에서 생성된 데이터가 불완전합니다. inventory를 확인하세요!"
+      tags: ["always", "validation"]
+      
   roles:
-    # 1. 공통 설정 및 패키지 설치
+    # 1. 인프라 기초 공사 (패키지, 디렉토리 준비)
     - role: common
+      tags: ["common", "setup"]
     
-    # 2. Tailscale 메시 네트워크 구성
+    # 2. 하이브리드 메시 네트워크 통합
     - role: tailscale
+      tags: ["network", "tailscale"]
+
+    # 3. 모델 정의에 따른 공유 스토리지 실체화
+    # if/then 대신 'when'을 사용하여 선언적으로 제어합니다.
+    - role: juicefs
+      when: has_storage | default(false) | bool
+      tags: ["storage", "juicefs"]
 
   post_tasks:
-      - name: "통합 완료 메시지 출력"
-        ansible.builtin.debug:
-          msg: |
-            [SUCCESS] Node '{{ node_spec.name }}' 프로비저닝 완료!
-            - 플랫폼: {{ node_spec.compute.platform }}
-            - 아키텍처: {{ node_spec.compute.arch }}
+    - name: "✨ MDI 인프라 프로비저닝 최종 보고"
+      ansible.builtin.debug:
+        msg: |
+          ==========================================================
+          🚀 [SUCCESS] Node '{{ node_spec.name }}' 가 논리적 인프라에 통합되었습니다!
+          ----------------------------------------------------------
+          - 플랫폼: {{ node_spec.compute.platform | upper }} ({{ node_spec.compute.arch }})
+          - OS 계열: {{ ansible_facts['os_family'] }}
+          - Tailscale IP: {{ tailscale_ip.stdout | default('N/A') }}
+          - 공유 스토리지: {{ '✅ Mounted on ' + storage_info.mount_point if has_storage | bool else '❌ Not Defined' }}
+          ==========================================================
+      tags: ["always", "report"]
