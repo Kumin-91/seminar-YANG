@@ -12,7 +12,7 @@ SITE_YAML = 05-ansible-bootstrap/site.yml
 
 
 .DEFAULT_GOAL := help
-.PHONY: help all keygen lint provision bootstrap-test bootstrap aws-destroy aws-clean
+.PHONY: help all keygen lint provision bootstrap aws-destroy aws-clean
 
 # 도움말 출력
 help:
@@ -24,7 +24,6 @@ help:
 	@echo "  lint            - [Phase 2] YANG 모델 검사 및 JSON 검증을 실행합니다."
 	@echo "  lint-test       - [Phase 2] 에러가 있는 JSON 파일로 YANG 모델 검사를 테스트합니다."
 	@echo "  provision       - [Phase 4] AWS/On-premises 인프라 프로비저닝을 실행합니다."
-	@echo "  bootstrap-test  - [Phase 5] Ansible connectivity를 테스트합니다."
 	@echo "  bootstrap       - [Phase 5] Ansible playbook을 실행하여 bootstrap을 수행합니다."
 	@echo "  aws-destroy     - [Phase 4] AWS infrastructure를 제거합니다."
 	@echo "  aws-clean       - [Phase 4] 생성된 파일 및 캐시를 정리합니다."
@@ -37,8 +36,6 @@ all:
 	$(MAKE) lint
 	@sleep 5
 	$(MAKE) provision
-	@sleep 5
-	$(MAKE) bootstrap-test
 	@sleep 5
 	$(MAKE) bootstrap
 	@sleep 5
@@ -80,11 +77,6 @@ lint-test:
 provision:
 	@echo "[Phase 4] AWS/On-premises 인프라 프로비저닝을 시작합니다..."
 	$(PYTHON) $(PROVISIONER)
-
-# Ansible 부트스트랩 테스트
-bootstrap-test:
-	@echo "[Phase 5] Ansible 부트스트랩 테스트를 실행합니다..."
-	ANSIBLE_CONFIG=$(ANSIBLE_CFG) ansible -i $(RESOLVER) -m ping all
 
 # Ansible 부트스트랩 실행
 bootstrap:

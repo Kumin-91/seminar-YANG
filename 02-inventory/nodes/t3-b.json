@@ -2,15 +2,15 @@
   "hybrid-cloud:cluster": {
     "node": [
       {
-        "name": "aws-t4g-node",
+        "name": "t3-b",
         "k8s-role-assignment": {
-            "node-role": "control_plane",
+            "node-role": "worker",
             "bootstrap-role": "join"
           },
         "compute": {
           "platform": "aws",
-          "arch": "arm64",
-          "instance-type": "t4g.medium",
+          "arch": "x86_64",
+          "instance-type": "t3.medium",
           "ebs-size": 20
         },
         "network": {

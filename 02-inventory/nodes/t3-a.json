@@ -2,26 +2,27 @@
   "hybrid-cloud:cluster": {
     "node": [
       {
-        "name": "site-a-node",
+        "name": "t3-a",
         "k8s-role-assignment": {
-          "node-role": "control_plane",
-          "bootstrap-role": "join"
-        },
+            "node-role": "control_plane",
+            "bootstrap-role": "join"
+          },
         "compute": {
-          "platform": "on-premise",
+          "platform": "aws",
           "arch": "x86_64",
-          "vcpu": 4,
-          "memory": 8
+          "instance-type": "t3.medium",
+          "ebs-size": 20
         },
         "network": {
-          "ssh-user": "sttb",
+          "ssh-user": "ec2-user",
           "ssh-port": 22,
-          "bootstrap-ip": "192.168.1.202"
+          "public-ip-required": true,
+          "use-eip": false
         },
         "storage": {
           "s3-endpoint": "s3.aoimiu.com",
           "redis-endpoint": "100.100.1.254:4279",
-          "cache-size": 30
+          "cache-size": 5
         }
       }
     ]

@@ -2,7 +2,66 @@
 
 One Logical Infrastructure, Many Physical Realities: A YANG-Driven Hybrid Cloud with K3s
 
-## How to Use This Repository
+[📄 Laboratory Overview](#laboratory-overview)
+
+[📈 Key Results](#key-results)
+
+[🗿 Next Milestone](#next-milestone)
+
+[📑 How to Use This Repository](#how-to-use-this-repository)
+
+[🛠️ Tools and Use Cases](#tools-and-use-cases)
+
+## 📄 Laboratory Overview
+
+> *Model is the Control Plane, not the Reality Plane.*  
+> *본 프로젝트는 이 한 문장을 증명하기 위한 실험실입니다. 지리적으로 떨어진 AWS (ARM/x86)와 온프레미스 자원이라는 현실 (RAW)을, YANG 모델이라는 정교한 질서 (PURE) 아래 하나의 클러스터로 수렴시키는 과정을 다룹니다.*
+
+YANG 모델링을 통한 추상화부터 데이터 검증, 스토리지 통합, 그리고 Terraform/Ansible을 활용한 자동화까지 하이브리드 클라우드 구축의 전 과정을 다룹니다. 파편화된 물리적 자원들을 단일 진실 원천 (SSoT)인 모델을 중심으로 결합하여, 설계가 곧 실제 인프라가 되는 모델-드리븐 인프라 (MDI)를 구현합니다.
+
+## 📈 Key Results
+
+* **Unified SSoT:** YANG 모델링을 통해 이기종 플랫폼 (AWS/On-Premise)의 리소스 명세를 통합하고 플랫폼 독립적인 설계도를 완성했습니다.
+
+* **Mesh Networking Backbone:** Tailscale을 활용해 모든 노드를 하나의 오버레이 네트워크로 연결하여 지리적 제약이 없는 일관된 통신 환경을 구축했습니다.
+
+* **Storage Abstraction:** JuiceFS를 통해 하이브리드 환경의 스토리지를 논리적으로 통합하여, 모든 노드에서 즉시 접근 가능한 공유 저장소를 확보했습니다.
+
+* **End-to-End MDI Pipeline:** YANG 설계도가 Terraform, Shell Script, Ansible을 거쳐 실제 인프라로 자동 전환되는 완전한 인프라 파이프라인을 시연했습니다.
+
+## 🗿 Next Milestone
+
+* **Direct Path Architecture (De-layering Orchestration)**
+
+    * 중간 레이어인 Python 기반 프로비저너를 제거하고, Terraform과 Shell이 설계도 (JSON)를 직접 해석하여 인프라를 생성하는 구조로 재편합니다.
+
+    * Make/Shell 기반의 가벼운 오케스트레이션으로 전환하여, 모델에서 실재로 이어지는 경로를 더욱 투명하고 직관적으로 개선합니다.
+
+* **Hybrid Backbone Optimization**
+
+    * 하이브리드 클라우드의 혈관인 Tailscale 네트워크의 레이턴시와 스루풋을 정밀 모니터링합니다.
+
+    * 지리적 경계를 넘나드는 통신 효율을 극대화하기 위한 커널 파라미터 튜닝 및 최적화 경로 설정을 진행합니다.
+
+* **Feedback-Driven Schema Evolution**
+
+    * 구축 과정에서 마주한 Reality Plane의 변수들을 다시 YANG 모델에 반영합니다.
+
+    * 더 복잡한 제약 조건과 시나리오를 수용할 수 있도록 스키마를 고도화하여 모델의 표현력을 확장합니다.
+
+* **From RAW to Hardened (K3s Tuning)**
+
+    * 현재의 RAW한 클러스터 상태를 넘어, 자원 할당 최적화 및 보안 하드닝을 통해 운영 안정성을 확보합니다.
+
+    * 이질적인 아키텍처 (ARM/x86) 간의 워크로드 스케줄링 정책을 정교화합니다.
+
+* **Lightweight Resolver Refactoring**
+
+    * Python 기반의 리졸버 코드를 더욱 가볍고 빠른 구조로 재구성하여, 인벤토리 생성과 플레이북 실행 사이의 지연을 최소화합니다.
+
+    * 인벤토리 해석의 효율성을 높여 대규모 노드 확장 시에도 일관된 오케스트레이션 성능을 보장합니다.
+
+## 📑 How to Use This Repository
 
 ```plain text
 Usage: make [target]
@@ -13,18 +72,18 @@ Targets:
     lint            - [Phase 2] YANG 모델 검사 및 JSON 검증을 실행합니다.
     lint-test       - [Phase 2] 에러가 있는 JSON 파일로 YANG 모델 검사를 테스트합니다.
     provision       - [Phase 4] AWS/On-premises 인프라 프로비저닝을 실행합니다.
-    bootstrap-test  - [Phase 5] Ansible connectivity를 테스트합니다.
     bootstrap       - [Phase 5] Ansible playbook을 실행하여 bootstrap을 수행합니다.
     aws-destroy     - [Phase 4] AWS infrastructure를 제거합니다.
     aws-clean       - [Phase 4] 생성된 파일 및 캐시를 정리합니다.
 ```
 
-## Tools and Use Cases
+## 🛠️ Tools and Use Cases
 
 | Tool  | Use Case |
 | --- | --- |
 | [![YANG](https://img.shields.io/badge/YANG-Modeling-blue?style=flat-square&logo=gitbook&logoColor=white)](https://nso-docs.cisco.com/guides/nso-6.1/development/core-concepts/yang#d5e1856) | YANG Modeling |
 | [![libyang](https://img.shields.io/badge/libyang-Validation-orange?style=flat-square&logo=c)](https://github.com/CESNET/libyang) | YANG Validation |
+[![JSON](https://img.shields.io/badge/JSON-Inventory-000000?style=flat-square&logo=json&logoColor=white)](https://www.json.org/) | Inventory Representation |
 | [![MinIO](https://img.shields.io/badge/MinIO-Storage-white?style=flat-square&logo=minio&logoColor=be212e)](https://min.io/) | Distributed Storage for JuiceFS |
 | [![Redis](https://img.shields.io/badge/Redis-In--Memory-red?style=flat-square&logo=redis&logoColor=white)](https://redis.io/) | In-Memory Database for JuiceFS |
 | [![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?style=flat-square&logo=terraform&logoColor=white)](https://www.terraform.io/) | AWS Infrastructure Provisioning |
@@ -35,7 +94,9 @@ Targets:
 | [![JuiceFS](https://img.shields.io/badge/JuiceFS-DFS-00A1E9?style=flat-square&logo=files&logoColor=white)](https://juicefs.com/) | Distributed File System |
 | [![K3s](https://img.shields.io/badge/K3s-Kubernetes-FF6E40?style=flat-square&logo=kubernetes&logoColor=white)](https://k3s.io/) | Lightweight Kubernetes |
 
-## Table of Contents
+---
+
+## Implementation Details
 
 [Phase 0. Physical Inventory & Resource Specification](#phase-0-physical-inventory--resource-specification)
 
@@ -53,7 +114,7 @@ Targets:
 
 ### Step 0. Shared Public Key Authentication Setup
 
-> 모든 노드 (AWS & On-Premise)의 통합 관리를 위해 공통 SSH Key Pair를 생성합니다.
+> *모든 노드 (AWS & On-Premise)의 통합 관리를 위해 공통 SSH Key Pair를 생성합니다.*
 
 ```bash
 # 로컬에서 SSH Key Pair 생성
@@ -64,23 +125,29 @@ ssh-keygen -t ed25519 -f ./00-key/hybrid-cloud -N ""
 cat ./00-key/hybrid-cloud.pub
 ```
 
-### Step 1. Strategic Role Allocation & Infrastructure Hierarchy
-
-| Location | Node Role | Bootstrap Role | Strategy |
-| --- | --- | --- | --- |
-| **AWS** | control-plane | init | 클러스터의 시드 노드이자 외부 접근 포인트 |
-| **Site A** | control-plane | join | 온프레미스 고가용성을 위한 보조 제어 평면 |
-| **Site B** | worker | join | 전용 워크로드 수행 노드 |
-
-### Step 2. Hardware Inventory & Compute/Storage Quotas
+### Step 1. Hardware Inventory & Compute/Storage Quotas
 
 | Location | IP | Port | Compute | Arch | Burstable | Cache Quota |
 | --- | --- | --- | --- | --- | --- | --- |
-| **AWS** | Dynamic | 22 | t4g.medium | arm64 | Yes | 5GB EBS |
 | **Site A** | 192.168.1.202 | 22 | 4 vCPU / 8GB RAM | x86_64 | No | 30GB NVME |
 | **Site B** | 192.168.1.203 | 22 | 4 vCPU / 8GB RAM | x86_64 | No | 20GB SSD |
+| **AWS** | Dynamic | 22 | t4g.medium | arm64 | Yes | 5GB EBS |
+| **AWS** | Dynamic | 22 | t3.medium | x86_64 | Yes | 5GB EBS |
 
-> AWS의 IP 주소는 Terraform 프로비저닝 후 동적으로 할당됩니다.
+> *AWS의 IP 주소는 Terraform 프로비저닝 후 동적으로 할당됩니다.*
+
+### Step 2. Strategic Role Allocation & Infrastructure Hierarchy
+
+| Location | Node Name | Node Role | Bootstrap Role | Strategy |
+| --- | --- | --- | --- | --- |
+| **Site A** | site-a-node | control-plane | join | HA을 위한 보조 제어 노드 |
+| **Site B** | site-b-node | worker | join | 확장된 워커 노드 |
+| **AWS** | t4g-seed | control-plane | **init** | 클러스터 시드 노드 |
+| **AWS** | t4g-a | worker | join | 확장된 워커 노드 |
+| **AWS** | t4g-b | worker | join | 확장된 워커 노드 |
+| **AWS** | t3-a | control-plane | join | 확장된 보조 제어 노드 |
+| **AWS** | t3-b | worker | join | 확장된 워커 노드 |
+| **AWS** | t3-c | worker | join | 확장된 워커 노드 |
 
 ---
 
@@ -216,11 +283,21 @@ yanglint -version
 
 ### Step 2. Data Instance Modeling: Node-specific JSON Manifests
 
-* **[`nodes/aws-t4g-node.json`](./02-inventory/nodes/aws-t4g-node.json)**
-
 * **[`nodes/site-a-node.json`](./02-inventory/nodes/site-a-node.json)**
 
 * **[`nodes/site-b-node.json`](./02-inventory/nodes/site-b-node.json)**
+
+* **[`nodes/t3-a.json`](./02-inventory/nodes/t3-a.json)**
+
+* **[`nodes/t3-b.json`](./02-inventory/nodes/t3-b.json)**
+
+* **[`nodes/t3-c.json`](./02-inventory/nodes/t3-c.json)**
+
+* **[`nodes/t4g-a.json`](./02-inventory/nodes/t4g-a.json)**
+
+* **[`nodes/t4g-b.json`](./02-inventory/nodes/t4g-b.json)**
+
+* **[`nodes/t4g-seed.json`](./02-inventory/nodes/t4g-seed.json)**
 
 * **[`providers/aws.json`](./02-inventory/providers/aws.json)**
 
@@ -234,9 +311,15 @@ done
 ```
 
 ```bash
-✅ YANG Lint Pass: 02-inventory/nodes/aws-t4g-node.json
 ✅ YANG Lint Pass: 02-inventory/nodes/site-a-node.json
 ✅ YANG Lint Pass: 02-inventory/nodes/site-b-node.json
+✅ YANG Lint Pass: 02-inventory/nodes/t3-a.json
+✅ YANG Lint Pass: 02-inventory/nodes/t3-b.json
+✅ YANG Lint Pass: 02-inventory/nodes/t3-c.json
+✅ YANG Lint Pass: 02-inventory/nodes/t4g-a.json
+✅ YANG Lint Pass: 02-inventory/nodes/t4g-b.json
+✅ YANG Lint Pass: 02-inventory/nodes/t4g-seed.json
+
 ```
 
 ```bash
@@ -258,16 +341,22 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
     ```plain text
     libyang err : Unsatisfied pattern - "t4g.large" does not conform to "[tcrm][1-8][a-z]*\.(nano|micro|small|medium)". (Schema location /hybrid-cloud:cluster/node/compute/platform-spec/aws/instance-type, data location /hybrid-cloud:compute, line number 19.)
-    YANGLINT[E]: Failed to parse input data file "02-inventory/aws-t4g-node.json".
-    ❌ YANG Lint Fail: 02-inventory/aws-t4g-node.json
+    YANGLINT[E]: Failed to parse input data file "02-inventory/t4g-seed.json".
+    ❌ YANG Lint Fail: 02-inventory/t4g-seed.json
     ```
 
 * 예시: `platform`과 `instance-type` 간의 불일치
 
     ```plain text
-    libyang err : Architecture mismatch detected: 'arm64' platform requires 'g' instance types, while 'x86_64' platform cannot use 'g' instance types. (/hybrid-cloud:cluster/node[name='aws-test-1']/compute/instance-type)
-    YANGLINT[E]: Failed to parse input data file "02-inventory/aws-test-1.json".
-    ❌ YANG Lint Fail: 02-inventory/aws-test-1.json
+    libyang err : Architecture mismatch detected: 'arm64' platform requires 'g' instance types, while 'x86_64' platform cannot use 'g' instance types. (/hybrid-cloud:cluster/node[name='t3-a']/compute/instance-type)
+    YANGLINT[E]: Failed to parse input data file "02-inventory/t3-a.json".
+    ❌ YANG Lint Fail: 02-inventory/t3-a.json
+    ```
+
+    ```plain text
+    libyang err : Architecture mismatch detected: 'arm64' platform requires 'g' instance types, while 'x86_64' platform cannot use 'g' instance types. (/hybrid-cloud:cluster/node[name='t4g-a']/compute/instance-type)
+    YANGLINT[E]: Failed to parse input data file "02-inventory/t4g-a.json".
+    ❌ YANG Lint Fail: 02-inventory/t4g-a.json
     ```
 
 * 예시: On-Premise 노드에 `public-ip-required`가 `true`로 설정된 경우
@@ -306,7 +395,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ## Phase 3. Storage Abstraction: JuiceFS Infrastructure Setup
 
-> 컴퓨트 노드와 완전히 격리된 독립형 스토리지 엔진을 구축합니다. S3 호환 API (MinIO)와 고성능 메타데이터 엔진 (Redis)을 추상화된 자원으로 제공하여 하이브리드 클러스터의 데이터 일관성을 보장합니다.
+> *컴퓨트 노드와 완전히 격리된 독립형 스토리지 엔진을 구축합니다. S3 호환 API (MinIO)와 고성능 메타데이터 엔진 (Redis)을 추상화된 자원으로 제공하여 하이브리드 클러스터의 데이터 일관성을 보장합니다.*
 
 ### Step 1. Containerized Storage Backend Deployment
 
@@ -331,7 +420,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 1. Terraform for AWS Node Provisioning
 
-> AWS 자원 생성에만 집중하며, `user_data` 스크립트를 완전히 배제하여 인프라 프로비저닝과 노드 부트스트래핑의 경계를 명확히 분리합니다. 이는 가장 순수한 형태의 IaC로서, 플랫폼에 종속되지 않는 하이브리드 클라우드 구축의 기반이 됩니다.
+> *AWS 자원 생성에만 집중하며, `user_data` 스크립트를 완전히 배제하여 인프라 프로비저닝과 노드 부트스트래핑의 경계를 명확히 분리합니다. 이는 가장 순수한 형태의 IaC로서, 플랫폼에 종속되지 않는 하이브리드 클라우드 구축의 기반이 됩니다.*
 
 #### 1. [`aws-base/data.tf`](./04-provisioning/aws-base/data.tf)
 
@@ -375,7 +464,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 2. Shell Scripting for On-Premise Access Bridge
 
-> 전용 API 등 별도의 프로비저닝 수단이 부재한 On-Premise 환경의 한계를 극복하기 위해, SSH 도구를 활용합니다. 이는 Ansible이 대상 노드에 진입하여 구성 관리를 수행하기 위한 사전 준비 단계입니다.
+> *전용 API 등 별도의 프로비저닝 수단이 부재한 On-Premise 환경의 한계를 극복하기 위해, SSH 도구를 활용합니다. 이는 Ansible이 대상 노드에 진입하여 구성 관리를 수행하기 위한 사전 준비 단계입니다.*
 
 #### 1. [`public_key.sh`](./04-provisioning/on-premise/public_key.sh)
 
@@ -393,7 +482,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 3. Unified Orchestration with Python: [`provisioner.py`](./04-provisioning/provisioner.py)
 
-> 하이브리드 클라우드 구축의 전 과정을 조율하는 중앙 통제 레이어입니다. 플랫폼마다 파편화된 프로비저닝 도구들을 단일 인터페이스로 통합하여, 설계와 실제 인프라 사이의 간극을 자동화로 메웁니다.
+> *하이브리드 클라우드 구축의 전 과정을 조율하는 중앙 통제 레이어입니다. 플랫폼마다 파편화된 프로비저닝 도구들을 단일 인터페이스로 통합하여, 설계와 실제 인프라 사이의 간극을 자동화로 메웁니다.*
 
 #### 1. Design Principles
 
@@ -457,7 +546,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 1. Dynamic Inventory Generation: [`inventory/resolver.py`](./05-ansible-bootstrap/inventory/resolver.py)
 
-> 수동으로 hosts 파일을 수정하는 전통적인 방식에서 벗어나, 코드가 인프라의 변화를 스스로 감지하고 환경 설정을 업데이트하는 Self-Healing Inventory를 구현했습니다.
+> *수동으로 hosts 파일을 수정하는 전통적인 방식에서 벗어나, 코드가 인프라의 변화를 스스로 감지하고 환경 설정을 업데이트하는 Self-Healing Inventory를 구현했습니다.*
 
 #### 1. Multi-State Data Aggregator
 
@@ -485,7 +574,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 2. Establishing the Baseline: Core Ansible Configuration & Common Playbook
 
-> Ansible이 하이브리드 클라우드의 다양한 환경에서 일관된 방식으로 작동할 수 있도록, 핵심 설정과 공통 작업을 정의하는 단계입니다. 이는 이후의 플레이북들이 안정적으로 실행될 수 있는 기반을 마련합니다.
+> *Ansible이 하이브리드 클라우드의 다양한 환경에서 일관된 방식으로 작동할 수 있도록, 핵심 설정과 공통 작업을 정의하는 단계입니다. 이는 이후의 플레이북들이 안정적으로 실행될 수 있는 기반을 마련합니다.*
 
 #### 1. Ansible Core Configuration: [`ansible.cfg`](./05-ansible-bootstrap/ansible.cfg)
 
@@ -505,6 +594,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
     interpreter_python = auto_silent
     # 출력 형식 설정 (YAML)
     stdout_callback = ansible.builtin.default
+    result_format = yaml
     # 콜백 플러그인 설정 (YAML)
     bin_ansible_callbacks = True
     # Ansible이 수집한 사실을 변수로 주입하지 않도록 설정
@@ -515,10 +605,6 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
     pipelining = True
     # SSH 연결 재사용 설정
     ssh_args = -o ControlMaster=auto -o ControlPersist=60s
-
-    [callback_default]
-    # 출력 형식 설정 (YAML)
-    result_format = yaml
     ```
 
 #### 2. Common Infrastructure Baseline: [`roles/common/tasks/main.yml`](./05-ansible-bootstrap/roles/common/tasks/main.yml)
@@ -539,7 +625,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 3. Ansible Playbook for Tailscale Mesh Network Setup: [`roles/tailscale/tasks/main.yml`](./05-ansible-bootstrap/roles/tailscale/tasks/main.yml)
 
-> 모든 노드가 하나의 Overlay 네트워크로 연결하기 위한 Tailscale 설치 및 초기 설정을 담당합니다.
+> *모든 노드가 하나의 Overlay 네트워크로 연결하기 위한 Tailscale 설치 및 초기 설정을 담당합니다.*
 
 #### 1. Tailscale 설치 스크립트 실행 & 현재 상태 체크
 
@@ -569,7 +655,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 4. Ansible Playbook for JuiceFS Setup: [`roles/juicefs/tasks/main.yml`](./05-ansible-bootstrap/roles/juicefs/tasks/main.yml)
 
-> JuiceFS 클라이언트 설치 및 S3/Redis 엔드포인트 연결을 담당합니다.
+> *JuiceFS 클라이언트 설치 및 S3/Redis 엔드포인트 연결을 담당합니다.*
 
 #### 1. JuiceFS 설치 스크립트 실행 & 마운트 디렉토리 생성
 
@@ -635,7 +721,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 5. Ansible Playbook for K3s Cluster Bootstrapping
 
-> MDI (Model-Driven Infrastructure) 설계에 따라 분류된 그룹 (`control_plane`, `worker`)과 전략 (`init`, `join`)을 바탕으로, 하이브리드 환경에 최적화된 K3s 클러스터를 선언적으로 구축합니다.
+> *MDI (Model-Driven Infrastructure) 설계에 따라 분류된 그룹 (`control_plane`, `worker`)과 전략 (`init`, `join`)을 바탕으로, 하이브리드 환경에 최적화된 K3s 클러스터를 선언적으로 구축합니다.*
 
 #### 0. Network Integration Strategy: Tailscale Backbone
 
@@ -659,13 +745,13 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 * **Cluster Seed (`k8s_init`):**
 
-    * On_Premise (site-a-node)를 클러스터의 기점으로 삼아 내장 `etcd`를 초기화합니다.
+    * AWS (`t4g-seed`)를 클러스터의 기점으로 삼아 내장 `etcd`를 초기화합니다.
 
     * `--cluster-init` 플래그를 통해 고가용성 아키텍처의 초석을 다지며, 부트스트래핑 성공 후 생성된 Cluster Token을 안전하게 추출 (`slurp`)하여 전역 변수화합니다.
 
 * **HA Expansion (`k8s_join`):**
 
-    * AWS (`aws-t4g-node`) 등 추가 컨트롤 플레인 노드를 시드 노드에 합류시킵니다.
+    * AWS (`t3-*`, `t4g-*`)/ On-Premise (`site-a-node`) 등 추가 컨트롤 플레인 노드를 시드 노드에 합류시킵니다.
 
     * `hostvars`를 통해 공유된 시드 노드의 Tailscale IP와 Token을 활용하여 물리적 위치에 관계없이 논리적 제어 계층을 확장합니다.
 
@@ -677,7 +763,7 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 ### Step 6. Master Orchestration Entrypoint: [`site.yml`](./05-ansible-bootstrap/site.yml)
 
-> 개별적으로 작성된 모든 Playbook을 논리적 선후 관계에 따라 순차 실행하여, 하이브리드 클라우드의 완전한 부트스트래핑을 달성하는 단일 진입점입니다.
+> *개별적으로 작성된 모든 Playbook을 논리적 선후 관계에 따라 순차 실행하여, 하이브리드 클라우드의 완전한 부트스트래핑을 달성하는 단일 진입점입니다.*
 
 #### Step 1. Infrastructure Startup & Network Fabrication
 
