@@ -4,15 +4,15 @@ PYTHON = python3
 ANSIBLE = ansible-playbook
 YANG = 01-schema
 JSON = 02-inventory
-PROVISIONER = 04-provisioning/provisioner.py
-REMOVER = 04-provisioning/provisioner_tf_remove.py
+DISPATCHER = 04-provisioning/dispatcher.sh
+REMOVER = 04-provisioning/purge_march.sh
 RESOLVER = 05-ansible-bootstrap/inventory/resolver.py
 ANSIBLE_CFG = 05-ansible-bootstrap/ansible.cfg
 SITE_YAML = 05-ansible-bootstrap/site.yml
 
 
 .DEFAULT_GOAL := help
-.PHONY: help all keygen lint provision bootstrap aws-destroy aws-clean
+.PHONY: help all keygen lint provision bootstrap aws-purge
 
 # 도움말 출력
 help:
@@ -25,8 +25,7 @@ help:
 	@echo "  lint-test       - [Phase 2] 에러가 있는 JSON 파일로 YANG 모델 검사를 테스트합니다."
 	@echo "  provision       - [Phase 4] AWS/On-premises 인프라 프로비저닝을 실행합니다."
 	@echo "  bootstrap       - [Phase 5] Ansible playbook을 실행하여 bootstrap을 수행합니다."
-	@echo "  aws-destroy     - [Phase 4] AWS infrastructure를 제거합니다."
-	@echo "  aws-clean       - [Phase 4] 생성된 파일 및 캐시를 정리합니다."
+	@echo "  aws-purge       - [Phase 4] AWS infrastructure를 제거합니다."
 
 # 모든 과정 실행
 all:
@@ -76,20 +75,16 @@ lint-test:
 # 인프라 프로비저닝
 provision:
 	@echo "[Phase 4] AWS/On-premises 인프라 프로비저닝을 시작합니다..."
-	$(PYTHON) $(PROVISIONER)
+	@chmod +x $(DISPATCHER)
+	@bash $(DISPATCHER)
 
 # Ansible 부트스트랩 실행
 bootstrap:
 	@echo "[Phase 5] Ansible 부트스트랩을 실행합니다..."
-	ANSIBLE_CONFIG=$(ANSIBLE_CFG) $(ANSIBLE) -i $(RESOLVER) $(SITE_YAML)
+	@ANSIBLE_CONFIG=$(ANSIBLE_CFG) $(ANSIBLE) -i $(RESOLVER) $(SITE_YAML)
 
 # AWS 인프라 제거
-aws-destroy:
+aws-purge:
 	@echo "[Phase 4] AWS 인프라를 제거합니다..."
-	$(PYTHON) $(REMOVER)
-
-# 생성된 파일 및 캐시 정리
-aws-clean:
-	@echo "[Phase 4] 생성된 파일 및 캐시를 정리합니다..."
-	@echo "이 명령어는 aws-destroy가 먼저 실행된 후에 사용되어야 합니다. (Enter로 확인)"; read _
-	find . -name "*.tfstate*" -type f -print -delete
+	@chmod +x $(REMOVER)
+	@bash $(REMOVER)

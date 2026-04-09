@@ -41,13 +41,5 @@ module aws-provider {
                 error-message "Subnet mask must be narrower than or equal to VPC mask.";
             }
         }
-
-        leaf public-key-dir {
-            type string {
-                pattern '[a-zA-Z0-9\.\-_/]+';
-            }
-            default "./00-key/hybrid-cloud.pub";
-            description "AWS 인스턴스에 사용할 공개 키 파일의 경로";
-        }
     }
 }
