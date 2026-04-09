@@ -1,6 +1,20 @@
 # Model-Driven Infrastructure: A YANG-Based Laboratory
 
-One Logical Infrastructure, Many Physical Realities: A YANG-Driven Hybrid Cloud with K3s
+[![YANG](https://img.shields.io/badge/YANG-Modeling-blue?style=flat-square&logo=gitbook&logoColor=white)](https://nso-docs.cisco.com/guides/nso-6.1/development/core-concepts/yang#d5e1856)
+[![libyang](https://img.shields.io/badge/libyang-Validation-orange?style=flat-square&logo=c)](https://github.com/CESNET/libyang)
+[![JSON](https://img.shields.io/badge/JSON-Inventory-000000?style=flat-square&logo=json&logoColor=white)](https://www.json.org/)  
+[![Shell](https://img.shields.io/badge/Shell-Dispatcher-4EAA25?style=flat-square&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/)
+[![Python](https://img.shields.io/badge/Python-Resolver-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)  
+[![Terraform](https://img.shields.io/badge/Terraform-Provisioning-7B42BC?style=flat-square&logo=terraform&logoColor=white)](https://www.terraform.io/)
+[![Ansible](https://img.shields.io/badge/Ansible-Bootstraping-EE0000?style=flat-square&logo=ansible&logoColor=white)](https://docs.ansible.com/)
+[![Jinja2](https://img.shields.io/badge/Jinja2-Templating-B54E29?style=flat-square&logo=jinja&logoColor=white)](https://jinja.palletsprojects.com/en/stable/)  
+[![MinIO](https://img.shields.io/badge/MinIO-Storage-white?style=flat-square&logo=minio&logoColor=be212e)](https://min.io/)
+[![Redis](https://img.shields.io/badge/Redis-In--Memory-red?style=flat-square&logo=redis&logoColor=white)](https://redis.io/)
+[![JuiceFS](https://img.shields.io/badge/JuiceFS-DFS-00A1E9?style=flat-square&logo=files&logoColor=white)](https://juicefs.com/)  
+[![Tailscale](https://img.shields.io/badge/Tailscale-Mesh--VPN-4A63E7?style=flat-square&logo=tailscale&logoColor=white)](https://tailscale.com/)
+[![K3s](https://img.shields.io/badge/K3s-Kubernetes-FF6E40?style=flat-square&logo=kubernetes&logoColor=white)](https://k3s.io/)
+
+**One Logical Infrastructure, Many Physical Realities: A YANG-Driven Hybrid Cloud with K3s**
 
 [📄 Laboratory Overview](#laboratory-overview)
 
@@ -30,12 +44,6 @@ YANG 모델링을 통한 추상화부터 데이터 검증, 스토리지 통합, 
 * **End-to-End MDI Pipeline:** YANG 설계도가 Terraform, Shell Script, Ansible을 거쳐 실제 인프라로 자동 전환되는 완전한 인프라 파이프라인을 시연했습니다.
 
 ## 🗿 Next Milestone
-
-* **Direct Path Architecture (De-layering Orchestration)**
-
-    * 중간 레이어인 Python 기반 프로비저너를 제거하고, Terraform과 Shell이 설계도 (JSON)를 직접 해석하여 인프라를 생성하는 구조로 재편합니다.
-
-    * Make/Shell 기반의 가벼운 오케스트레이션으로 전환하여, 모델에서 실재로 이어지는 경로를 더욱 투명하고 직관적으로 개선합니다.
 
 * **Hybrid Backbone Optimization**
 
@@ -73,26 +81,8 @@ Targets:
     lint-test       - [Phase 2] 에러가 있는 JSON 파일로 YANG 모델 검사를 테스트합니다.
     provision       - [Phase 4] AWS/On-premises 인프라 프로비저닝을 실행합니다.
     bootstrap       - [Phase 5] Ansible playbook을 실행하여 bootstrap을 수행합니다.
-    aws-destroy     - [Phase 4] AWS infrastructure를 제거합니다.
-    aws-clean       - [Phase 4] 생성된 파일 및 캐시를 정리합니다.
+    aws-purge       - [Phase 4] AWS infrastructure를 제거합니다.
 ```
-
-## 🛠️ Tools and Use Cases
-
-| Tool  | Use Case |
-| --- | --- |
-| [![YANG](https://img.shields.io/badge/YANG-Modeling-blue?style=flat-square&logo=gitbook&logoColor=white)](https://nso-docs.cisco.com/guides/nso-6.1/development/core-concepts/yang#d5e1856) | YANG Modeling |
-| [![libyang](https://img.shields.io/badge/libyang-Validation-orange?style=flat-square&logo=c)](https://github.com/CESNET/libyang) | YANG Validation |
-[![JSON](https://img.shields.io/badge/JSON-Inventory-000000?style=flat-square&logo=json&logoColor=white)](https://www.json.org/) | Inventory Representation |
-| [![MinIO](https://img.shields.io/badge/MinIO-Storage-white?style=flat-square&logo=minio&logoColor=be212e)](https://min.io/) | Distributed Storage for JuiceFS |
-| [![Redis](https://img.shields.io/badge/Redis-In--Memory-red?style=flat-square&logo=redis&logoColor=white)](https://redis.io/) | In-Memory Database for JuiceFS |
-| [![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?style=flat-square&logo=terraform&logoColor=white)](https://www.terraform.io/) | AWS Infrastructure Provisioning |
-| [![Shell](https://img.shields.io/badge/Shell-Scripting-4EAA25?style=flat-square&logo=gnubash&logoColor=white)](https://www.gnu.org/software/bash/) | On-Premise Access Bridge |
-| [![Python](https://img.shields.io/badge/Python-Orchestration-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/) |  Unified Orchestration & Dynamic Inventory |
-| [![Ansible](https://img.shields.io/badge/Ansible-Automation-EE0000?style=flat-square&logo=ansible&logoColor=white)](https://docs.ansible.com/) | AWS/On-premises Bootstrap & Secret Management |
-| [![Tailscale](https://img.shields.io/badge/Tailscale-Mesh--VPN-4A63E7?style=flat-square&logo=tailscale&logoColor=white)](https://tailscale.com/) | Unified Mesh Networking |
-| [![JuiceFS](https://img.shields.io/badge/JuiceFS-DFS-00A1E9?style=flat-square&logo=files&logoColor=white)](https://juicefs.com/) | Distributed File System |
-| [![K3s](https://img.shields.io/badge/K3s-Kubernetes-FF6E40?style=flat-square&logo=kubernetes&logoColor=white)](https://k3s.io/) | Lightweight Kubernetes |
 
 ---
 
@@ -462,83 +452,55 @@ JSON 데이터에 에러가 있는 경우, `yanglint`가 상세한 오류 메시
 
 * `source_dest_check`를 비활성화하여 인스턴스가 하이브리드 메시 네트워크 상의 패킷 라우팅 중계지 역할을 수행할 수 있도록 설정합니다.
 
-### Step 2. Shell Scripting for On-Premise Access Bridge
+### Step 2. Unified Orchestration with Shell Script: [`dispatcher.sh`](./04-provisioning/dispatcher.sh)
 
-> *전용 API 등 별도의 프로비저닝 수단이 부재한 On-Premise 환경의 한계를 극복하기 위해, SSH 도구를 활용합니다. 이는 Ansible이 대상 노드에 진입하여 구성 관리를 수행하기 위한 사전 준비 단계입니다.*
+> *설계도 (JSON)가 인프라 실재로 이어지는 경로를 최소화한 경량 디스패처입니다. 모델 중심의 데이터를 기반으로 Terraform과 Shell Bridge를 동적으로 실행하여 하이브리드 노드 구축의 투명성과 실행 속도를 극대화했습니다.*
 
-#### 1. [`public_key.sh`](./04-provisioning/on-premise/public_key.sh)
+#### 1. Direct-Path Orchestration: Zero-Layer Abstraction
 
-* 리눅스 표준 유틸리티인 `ssh-copy-id`를 사용하여 로컬 머신의 공개 키를 원격 On-Premise 노드에 안전하게 복사합니다.
+* 기존 Python 기반의 복잡한 객체 생성 과정을 제거하고, Shell과 jq만으로 구성된 Direct-Path 구조를 채택했습니다.
 
-* 대상 노드의 IP 주소, SSH 포트, 사용자 계정을 변수로 받아 다양한 On-Premise 환경 (Proxmox VM, Bare-metal 등)에 유연하게 대응합니다.
+* 중간 추상화 레이어를 최소화하여, YANG 모델 (JSON)에서 실제 인프라 명령 (Terraform/SSH)으로 이어지는 데이터 흐름을 투명하고 직관적으로 개선했습니다.
 
-* `ssh-copy-id` 고유의 기능을 통해 중복 키 등록을 방지하고, 원격지의 `.ssh` 디렉토리 및 `authorized_keys` 파일 권한을 보안 정책에 맞게 자동 조정합니다.
+* `set -e`와 실시간 에러 핸들링을 통해 프로비저닝 과정 중 발생하는 사소한 결함도 즉시 감지하여 인프라 오염을 원천 차단합니다.
 
-#### 2. Orchestration-Ready Design
+#### 2. jq-Powered Metadata Routing
 
-* 스크립트는 복잡한 노드 설정 기능을 배제하고 오직 SSH 신뢰 관계 구축이라는 단일 목적에만 집중합니다.
+* `jq`를 활용해 YANG 모델의 계층 구조를 직접 탐색하고, 노드별 플랫폼 (`aws`, `on-premise`) 및 네트워크 속성을 실시간으로 추출합니다.
 
-* 개별 노드에 대한 수동 실행을 넘어, 외부 오케스트레이터 (Make 또는 Python)가 여러 JSON 인벤토리를 순회하며 본 스크립트를 루프 형태로 호출할 수 있도록 설계되었습니다.
+* 추출된 메타데이터를 기반으로 Terraform의 `-chdir` 경로와 `-var` 주입 값을 동적으로 결정하여, 하나의 스크립트로 이기종 환경을 통합 관리합니다.
 
-### Step 3. Unified Orchestration with Python: [`provisioner.py`](./04-provisioning/provisioner.py)
+* 모델에서 정의된 기본값을 jq의 Fallback 연산자 (`//`)로 구현하여 데이터 누락 시에도 안정적인 실행을 보장합니다.
 
-> *하이브리드 클라우드 구축의 전 과정을 조율하는 중앙 통제 레이어입니다. 플랫폼마다 파편화된 프로비저닝 도구들을 단일 인터페이스로 통합하여, 설계와 실제 인프라 사이의 간극을 자동화로 메웁니다.*
+#### 3. Isolated State & Scalable Execution
 
-#### 1. Design Principles
+* 모든 AWS 노드에 대해 고유한 `.tfstate` 파일을 생성함으로써, 특정 노드의 변경이나 삭제가 전체 클러스터 상태에 영향을 주지 않는 수평적 확장성을 확보했습니다.
 
-* Data-Driven Execution
+* `realpath`를 통한 절대 경로 추적 방식을 도입하여, 프로젝트 내 어느 디렉토리에서 실행하더라도 인벤토리와 프로비저닝 코드를 정확하게 결합합니다.
 
-    * `02-inventory/providers` 폴더 내의 JSON 매니페스트를 로드하여 AWS 프로비저닝에 필요한 공통 설정 (리전, VPC CIDR 등)을 추출합니다.
+* Cloud (Terraform)와 On-Premise (SSH Bridge) 간의 실행 분기를 단일 `case` 문으로 통합하여, 향후 신규 플랫폼 추가 시에도 코드 수정 범위를 최소화했습니다.
 
-    * `02-inventory/nodes` 폴더 내의 모든 JSON 매니페스트를 순회하며 platform 타입을 동적으로 분석합니다.
+### Step 3. Automated Infrastructure De-provisioner: [`purge_march.sh`](./04-provisioning/purge_march.sh)
 
-    * **`aws`** 타입일 경우 Terraform을, **`on-premise`** 타입일 경우 전용 Shell 스크립트를 선택적으로 호출하여 각 환경에 최적화된 프로비저닝을 수행합니다.
+> *YANG 설계도와 Terraform의 상태 파일 (`.tfstate`)을 동적으로 결합하여, 모델이 정의한 인프라의 시작과 끝을 일관성 있게 관리합니다.*
 
-* Path Independence
+#### 1. Cost-Optimization & Resource Recovery
 
-    * `Path(__file__).resolve().parent.parent`를 활용하여 스크립트의 절대 경로를 계산합니다.
+* 사용하지 않는 AWS 인프라를 즉시 회수하여 불필요한 과금을 방지하고 클라우드 자원을 효율적으로 관리합니다.
 
-    * 이로 인해 프로젝트 루트나 하위 디렉토리 등 어느 위치에서 실행하더라도 인벤토리 파일과 Terraform 코드를 정확하게 탐색할 수 있는 견고함을 갖췄습니다.
+* `terraform destroy` 명령을 자동화하여 수동 작업 시 발생할 수 있는 자원 누락 문제를 원천 차단합니다.
 
-* State Independence
+#### 2. State-Aware De-provisioning
 
-    * Terraform 실행시 각 노드별로 독립적인 `.tfstate` 파일을 생성하여, 리소스 간 충돌을 방지하고 특정 노드만 선택적으로 프로비저닝하거나 제거할 수 있는 수평적 확장성을 확보했습니다.
+* 각 노드별로 분리된 `.tfstate` 파일을 기반으로 동작하므로, 전체 클러스터에 영향을 주지 않고 특정 노드의 자원만 안전하게 제거할 수 있습니다.
 
-* Hybrid Data Model Support
+* 실제 `terraform destroy` 명령을 내리기 전 해당 노드의 상태 파일 존재 여부를 먼저 검사하여, 이미 제거된 자원에 대한 중복 실행 에러를 방지하는 방어적 로직을 갖췄습니다.
 
-    * YANG 모델의 중첩 구조와 사용자가 작성한 평면 구조를 동시에 지원하도록 설계되었습니다.
+#### 3. Execution Consistency
 
-    * `.get()` 메서드를 활용한 방어적 코딩을 통해 데이터 누락 시에도 기본값을 할당하거나 안전하게 실행을 중단하여 인프라 오염을 방지합니다.
+* 프로비저닝 단계와 동일한 매니페스트 경로 및 SSH 키 경로 변수를 Terraform에 주입합니다.
 
-#### 2. Orchestration Flow
-
-* **Provider Configuration Loading:** `02-inventory/providers` 폴더에서 AWS 프로비저닝에 필요한 공통 설정을 로드하고 Terraform 코드에 주입합니다.
-
-* **Inventory Parsing:** `02-inventory/nodes` 폴더의 JSON 데이터를 로드하여 노드별 명세를 파악합니다.
-
-* **Tool Selection:** Platform 타입 (`aws` vs `on-premise`)에 따라 적절한 하위 모듈을 트리거합니다.
-
-* **Credential Injection:** 공통 SSH 공개 키를 AWS 키 페어로 등록하거나, On-Premise 노드의 `authorized_keys`에 주입합니다.
-
-#### 3. [`provisioner_tf_remove.py`](./04-provisioning/provisioner_tf_remove.py)
-
-* Cost-Optimization & Resource Recovery
-
-    * 사용하지 않는 AWS 인프라를 즉시 회수하여 불필요한 과금을 방지하고 클라우드 자원을 효율적으로 관리합니다.
-
-    * `terraform destroy` 명령을 자동화하여 수동 작업 시 발생할 수 있는 자원 누락 문제를 원천 차단합니다.
-
-* State-Aware De-provisioning
-
-    * 각 노드별로 분리된 `.tfstate` 파일을 기반으로 동작하므로, 전체 클러스터에 영향을 주지 않고 특정 노드의 자원만 안전하게 제거할 수 있습니다.
-
-    * 실제 `terraform destroy` 명령을 내리기 전 해당 노드의 상태 파일 존재 여부를 먼저 검사하여, 이미 제거된 자원에 대한 중복 실행 에러를 방지하는 방어적 로직을 갖췄습니다.
-
-* Execution Consistency
-
-    * 프로비저닝 단계와 동일한 매니페스트 경로 및 SSH 키 경로 변수를 Terraform에 주입합니다.
-
-    * 이를 통해 Terraform이 파괴 시점에도 동적 자원 이름을 정확히 계산하여, 이름 충돌 없이 대상 자원을 식별할 수 있도록 보장합니다.
+* 이를 통해 Terraform이 파괴 시점에도 동적 자원 이름을 정확히 계산하여, 이름 충돌 없이 대상 자원을 식별할 수 있도록 보장합니다.
 
 ---
 

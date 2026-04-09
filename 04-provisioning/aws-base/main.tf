@@ -4,5 +4,5 @@ provider "aws" {
 
 resource "aws_key_pair" "shared_key" {
     key_name   = "hybrid-cloud-shared-key"
-    public_key = file("${path.module}/../../${local.public_key_path}")
+    public_key = file("${local.public_key_path}")
 }
