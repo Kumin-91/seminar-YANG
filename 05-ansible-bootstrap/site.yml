@@ -4,9 +4,6 @@
   become: yes
   gather_facts: yes
   any_errors_fatal: true 
-  vars_files:
-    - group_vars/all/tailscale.yml
-    - group_vars/all/juicefs.yml
   roles:
     # 공통 설정과 필수 도구 설치
     - role: common
@@ -14,12 +11,17 @@
     # Tailscale 설치 및 네트워크 설정
     - role: tailscale
       tags: ["network", "tailscale"]
-    # 공유 스토리지 설정 (옵션)
+
+- name: "Step 2. Shared Storage Configuration"
+  hosts: storage_nodes
+  become: yes
+  gather_facts: no
+  # storage_nodes 그룹에 대한 스토리지 설정 역할 할당
+  roles:
     - role: juicefs
-      when: has_storage | default(false) | bool
       tags: ["storage", "juicefs"]
 
-- name: "Step 2. K3s Cluster Bootstrapping - Control Plane"
+- name: "Step 3. K3s Cluster Bootstrapping - Control Plane"
   hosts: control_plane
   become: yes
   # K3s 컨트롤 플레인 노드에 대한 부트스트래핑 역할 할당
@@ -27,26 +29,10 @@
     - role: k3s-controller
       tags: ["k3s", "controller"]
 
-- name: "Step 3. K3s Cluster Bootstrapping - Worker Node"
+- name: "Step 4. K3s Cluster Bootstrapping - Worker Node"
   hosts: worker
   become: yes
   # K3s 워커 노드에 대한 부트스트래핑 역할 할당
   roles:
     - role: k3s-worker
       tags: ["k3s", "worker"]
-
-- name: "Step 4. Post-Provisioning Report"
-  hosts: all
-  tasks:
-    - name: "✨ MDI 인프라 프로비저닝 최종 보고"
-      ansible.builtin.debug:
-        msg: |
-          ==========================================================
-          🚀 [SUCCESS] Node '{{ inventory_hostname }}' 가 논리적 인프라에 통합되었습니다!
-          ----------------------------------------------------------
-          - 플랫폼: {{ node_spec.platform | upper }} ({{ node_spec.arch }})
-          - OS 계열: {{ ansible_facts['os_family'] }}
-          - Tailscale IP: {{ tailscale_ip.stdout | default('N/A') }}
-          - 공유 스토리지: {{ '✅ Mounted on ' + storage_info.mount_point if has_storage | bool else '❌ Not Defined' }}
-          ==========================================================
-      tags: ["always", "report"]

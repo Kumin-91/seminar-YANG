@@ -1,0 +1,5 @@
+- name: restart juicefs-mount
+  ansible.builtin.systemd:
+    name: juicefs-mount
+    state: restarted
+    daemon_reload: yes

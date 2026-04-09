@@ -2,16 +2,14 @@
   block:
     - name: "설치 스크립트 실행"
       ansible.builtin.shell: |
-        curl -sSL https://d.juicefs.com/install | sh -s {{ juicefs_bin_path | dirname }}
+        curl -sSL https://d.juicefs.com/install | sh -s /usr/local/bin
       args:
-        creates: "{{ juicefs_bin_path }}"
-      become: yes
+        creates: "/usr/local/bin/juicefs"
 
     - name: "설치 확인"
-      ansible.builtin.command: "{{ juicefs_bin_path }} --version"
+      ansible.builtin.command: "/usr/local/bin/juicefs --version"
       register: juicefs_version
       changed_when: false
-      become: yes
 
     - name: "마운트 디렉토리 생성"
       ansible.builtin.file:
@@ -20,11 +18,10 @@
         owner: "{{ ansible_user }}"
         group: "{{ ansible_user }}"
         mode: '0770'
-      become: yes
 
 - name: "2. JuiceFS 파일 시스템 포맷"
   ansible.builtin.command: >
-    {{ juicefs_bin_path }} format
+    /usr/local/bin/juicefs format
     --storage s3
     --bucket "{{ storage_info.s3_url }}/jfs"
     --access-key "{{ minio_root_user }}"
@@ -32,37 +29,34 @@
     "redis://:{{ redis_password }}@{{ storage_info.redis_url }}/0"
     "{{ jfs_name | default('hybrid-cloud-jfs') }}"
   register: format_result
-  # 이미 존재한다는 에러 (rc=1)는 무시하여 멱등성을 유지합니다.
   failed_when: "format_result.rc != 0 and 'already exists' not in format_result.stderr"
-  become: yes
 
 - name: "3. FUSE: 타 사용자 접근 허용 설정"
   ansible.builtin.lineinfile:
     path: /etc/fuse.conf
     regexp: '^#?user_allow_other'
     line: 'user_allow_other'
-  become: yes
 
-- name: "4. JuiceFS 마운트 서비스 설정 및 시작"
+- name: "4. JuiceFS 마운트 서비스 배포 및 활성화"
   block:
     - name: "Jinja2 서비스 템플릿 배포"
       ansible.builtin.template:
         src: juicefs-mount.service.j2
         dest: /etc/systemd/system/juicefs-mount.service
         mode: '0644'
-      become: yes
+      notify: restart juicefs-mount
 
-    - name: "JuiceFS 마운트 서비스 시작 및 활성화"
+    - name: "JuiceFS 마운트 서비스 시작"
       ansible.builtin.systemd:
         name: juicefs-mount
         state: started
         enabled: yes
         daemon_reload: yes
-      become: yes
 
 - name: "5. JuiceFS 상태 및 연결 확인"
   ansible.builtin.command: "df -h {{ storage_info.mount_point }}"
   register: mount_status
+  changed_when: false
   until: mount_status.rc == 0
   retries: 5
   delay: 5
@@ -74,7 +68,6 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0770'
-  become: yes
 
 - name: "7. 연결 성공 메시지 출력"
   ansible.builtin.debug:

@@ -5,32 +5,27 @@
     --node-ip={{ ts_ip }} \
     --node-external-ip={{ ts_ip }} \
     --flannel-iface=tailscale0 \
-    --write-kubeconfig-mode=644
+    --write-kubeconfig-mode=644 \
+    {% for label in k8s_node_labels | default([]) %}--node-label "{{ label }}" {% endfor %}
   args:
     creates: /etc/rancher/k3s/k3s.yaml
   when: "'k8s_init' in group_names"
 
-- name: "2. Cluster Join Token 추출 및 공유"
+- name: "2. Cluster Join Token 추출"
   ansible.builtin.slurp:
     src: "/var/lib/rancher/k3s/server/node-token"
   register: k3s_token_raw
   when: "'k8s_init' in group_names"
 
-- name: "3. 토큰을 모든 노드에게 전파"
-  ansible.builtin.set_fact:
-    cluster_token: "{{ hostvars[groups['k8s_init'][0]]['k3s_token_raw']['content'] | b64decode | trim }}"
-  run_once: true
-
-- name: "4. 추가 Control Plane 노드 합류"
+- name: "3. 추가 Control Plane 노드 합류"
   ansible.builtin.shell: |
-    curl -sfL https://get.k3s.io | K3S_TOKEN={{ cluster_token }} sh -s - server \
+    curl -sfL https://get.k3s.io | K3S_TOKEN={{ hostvars[groups['k8s_init'][0]]['k3s_token_raw']['content'] | b64decode | trim }} sh -s - server \
     --server https://{{ hostvars[groups['k8s_init'][0]]['ts_ip'] }}:6443 \
     --node-ip={{ ts_ip }} \
     --node-external-ip={{ ts_ip }} \
     --flannel-iface=tailscale0 \
-    --write-kubeconfig-mode=644
+    --write-kubeconfig-mode=644 \
+    {% for label in k8s_node_labels | default([]) %}--node-label "{{ label }}" {% endfor %}
   args:
     creates: /etc/rancher/k3s/k3s.yaml
-  when: 
-    - "'k8s_join' in group_names"
-    - "'control_plane' in group_names"
+  when: "'k8s_join' in group_names"

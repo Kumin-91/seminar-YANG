@@ -81,6 +81,7 @@ provision:
 # Ansible 부트스트랩 실행
 bootstrap:
 	@echo "[Phase 5] Ansible 부트스트랩을 실행합니다..."
+	@chmod +x $(RESOLVER)
 	@ANSIBLE_CONFIG=$(ANSIBLE_CFG) $(ANSIBLE) -i $(RESOLVER) $(SITE_YAML)
 
 # AWS 인프라 제거

@@ -1,31 +1,36 @@
-- name: "1. Tailscale 설치 스크립트 실행 및 설치 확인"
+- name: "1. Tailscale 패키지 설치"
   block:
-    - name: "설치 스크립트 실행"
+    - name: "공식 설치 스크립트 실행"
       ansible.builtin.shell: |
         curl -fsSL https://tailscale.com/install.sh | sh
       args:
-        creates: /usr/sbin/tailscale
+        creates: /usr/sbin/tailscaled
 
-    - name: "현재 상태 체크"
-      ansible.builtin.command: tailscale status --json
-      register: tailscale_status
-      failed_when: false
-      changed_when: false
-  become: yes
+    - name: "서비스 활성화 및 부팅 시 자동 시작"
+      ansible.builtin.systemd:
+        name: tailscaled
+        state: started
+        enabled: yes
 
-- name: "2. Tailscale 서비스 활성화 및 시작"
+- name: "2. Tailnet 조인 여부 확인"
+  ansible.builtin.command: tailscale status --json
+  register: tailscale_status
+  failed_when: false
+  changed_when: false
+
+- name: "3. Tailnet 인증 및 연결 설정"
+  ansible.builtin.command: >
+    tailscale up 
+    --authkey={{ tailscale_auth_key }} 
+    --hostname={{ inventory_hostname }} 
+    --accept-routes=false 
+    --accept-dns=false 
+    --reset
+  when: (tailscale_status.stdout | from_json).BackendState != "Running"
+  no_log: true
+
+- name: "4. Tailscale IP 할당 및 변수 주입"
   block:
-    - name : "서비스 시작"
-      ansible.builtin.shell: |
-        tailscale up \
-          --authkey {{ tailscale_auth_key }} \
-          --hostname {{ inventory_hostname }} \
-          --accept-routes=false \
-          --accept-dns=false \
-          --reset
-      when: (tailscale_status.stdout | from_json).BackendState != "Running"
-      no_log: true
-
     - name: "IPv4 주소 확인"
       ansible.builtin.command: tailscale ip -4
       register: tailscale_ip
@@ -34,13 +39,13 @@
       retries: 5
       delay: 2
 
-    - name: "IPv4 주소 등록"
+    - name: "Fact 변수 (ts_ip) 등록"
       ansible.builtin.set_fact:
         ts_ip: "{{ tailscale_ip.stdout }}"
-  become: yes
+  when: ts_ip is not defined
 
-- name: "3. 연결 성공 메시지 출력"
+- name: "5. 연결 성공 메시지 출력"
   ansible.builtin.debug:
     msg: 
       - "🚀 Tailscale connected on {{ inventory_hostname }}!"
-      - "🌐 IP: {{ ts_ip }}"
+      - "🌐 Mesh IP: {{ ts_ip }}"
