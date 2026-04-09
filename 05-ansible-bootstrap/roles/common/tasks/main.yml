@@ -18,7 +18,7 @@
 
 - name: "2. 필수 도구 설치"
   block:
-  - name: "패키지 설치: RedHat/Rocky"
+  - name: "패키지 설치 - RedHat/Rocky"
     ansible.builtin.dnf:
       name: "{{ base_packages }}"
       state: present
@@ -26,7 +26,7 @@
       - ansible_facts['os_family'] == "RedHat"
       - ansible_facts['distribution'] != "Amazon"
 
-  - name: "패키지 설치: Amazon Linux 2023"
+  - name: "패키지 설치 - Amazon Linux 2023"
     ansible.builtin.dnf:
       name: "{{ base_packages }}"
       state: present
@@ -35,7 +35,7 @@
       - ansible_facts['os_family'] == "RedHat"
       - ansible_facts['distribution'] == "Amazon"
 
-  - name: "패키지 설치: Debian/Ubuntu"
+  - name: "패키지 설치 - Debian/Ubuntu"
     ansible.builtin.apt:
       name: "{{ base_packages }}"
       state: present

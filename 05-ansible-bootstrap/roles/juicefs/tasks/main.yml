@@ -44,7 +44,14 @@
         src: juicefs-mount.service.j2
         dest: /etc/systemd/system/juicefs-mount.service
         mode: '0644'
-      notify: restart juicefs-mount
+      register: jfs_service_template
+
+    - name: "JuiceFS 서비스 설정 재시작"
+      ansible.builtin.systemd:
+        name: juicefs-mount
+        state: restarted
+        daemon_reload: yes
+      when: jfs_service_template.changed
 
     - name: "JuiceFS 마운트 서비스 시작"
       ansible.builtin.systemd:
@@ -68,11 +75,3 @@
     owner: "{{ ansible_user }}"
     group: "{{ ansible_user }}"
     mode: '0770'
-
-- name: "7. 연결 성공 메시지 출력"
-  ansible.builtin.debug:
-    msg: 
-      - "🚀 JuiceFS Mount Success on {{ inventory_hostname }}!"
-      - "📍 Mount Point: {{ storage_info.mount_point }}"
-      - "📊 Cache Config: {{ storage_info.cache_size }}GB"
-      - "🔗 Backend: {{ storage_info.s3_url }}"

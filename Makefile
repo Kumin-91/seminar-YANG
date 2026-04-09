@@ -31,13 +31,9 @@ help:
 all:
 	@echo "모든 과정을 실행합니다..."
 	$(MAKE) keygen
-	@sleep 5
 	$(MAKE) lint
-	@sleep 5
 	$(MAKE) provision
-	@sleep 5
 	$(MAKE) bootstrap
-	@sleep 5
 	@echo "모든 과정이 완료되었습니다."
 
 # SSH 키 페어 생성 (이미 존재하면 건너뜀)

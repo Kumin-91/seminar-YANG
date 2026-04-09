@@ -44,8 +44,76 @@
         ts_ip: "{{ tailscale_ip.stdout }}"
   when: ts_ip is not defined
 
-- name: "5. 연결 성공 메시지 출력"
-  ansible.builtin.debug:
-    msg: 
-      - "🚀 Tailscale connected on {{ inventory_hostname }}!"
-      - "🌐 Mesh IP: {{ ts_ip }}"
+- name: "5. NIC Offload 기능 조정 및 영구 적용 (GRO/RX)"
+  block:
+    - name: "즉시 적용 (Runtime)"
+      ansible.builtin.command: /sbin/ethtool -K {{ ansible_facts['default_ipv4']['interface'] }} rx-udp-gro-forwarding on rx-gro-list off
+      ignore_errors: true
+      register: ethtool_result
+      changed_when: false
+
+    - name: "재부팅 유지를 위한 Systemd Oneshot 서비스 생성"
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/nic-offload-tuning.service
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=NIC Offload Tuning (UDP GRO) for Tailscale Backbone
+          After=network-online.target
+          Wants=network-online.target
+
+          [Service]
+          Type=oneshot
+          ExecStart=-/sbin/ethtool -K {{ ansible_facts['default_ipv4']['interface'] }} rx-udp-gro-forwarding on rx-gro-list off
+          RemainAfterExit=yes
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: "NIC 튜닝 서비스 활성화"
+      ansible.builtin.systemd:
+        name: nic-offload-tuning
+        enabled: yes
+        daemon_reload: yes
+
+- name: "6. 커널 파라미터 튜닝 (BBR & UDP Buffer)"
+  ansible.builtin.sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    # 1. BBR 활성화
+    - { key: 'net.core.default_qdisc', value: 'fq' }
+    - { key: 'net.ipv4.tcp_congestion_control', value: 'bbr' }
+    # 2. UDP Receive/Send Buffer 최대치 증가 (WireGuard 최적화, 25MB)
+    - { key: 'net.core.rmem_max', value: '26214400' }
+    - { key: 'net.core.wmem_max', value: '26214400' }
+    - { key: 'net.core.rmem_default', value: '8388608' }
+    - { key: 'net.core.wmem_default', value: '8388608' }
+    - { key: 'net.core.netdev_max_backlog', value: '5000' }
+    # 3. IP 포워딩 (서브넷 라우팅 대비)
+    - { key: 'net.ipv4.ip_forward', value: '1' }
+
+- name: "7. Tailscale 데몬 리소스 우선순위 할당"
+  block:
+    - name: "Systemd Override 디렉토리 생성"
+      ansible.builtin.file:
+        path: /etc/systemd/system/tailscaled.service.d
+        state: directory
+
+    - name: "우선순위 튜닝 파일 주입"
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/tailscaled.service.d/priority.conf
+        content: |
+          [Service]
+          OOMScoreAdjust=-500
+          Nice=-5
+      register: tailscale_override
+
+    - name: "Tailscaled 데몬 재시작"
+      ansible.builtin.systemd:
+        name: tailscaled
+        state: restarted
+        daemon_reload: yes
+      when: tailscale_override.changed
