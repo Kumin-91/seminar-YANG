@@ -1,13 +1,17 @@
 - name: "1. K3s Worker 설치 및 클러스터 합류"
+  vars:
+    master_node: "{{ groups['k8s_init'][0] }}"
+    cluster_url: "https://{{ hostvars[master_node]['ts_ip'] | trim }}:6443"
+    cluster_token: "{{ hostvars[master_node]['k3s_token_raw']['content'] | b64decode | trim }}"
   ansible.builtin.shell: |
-    curl -sfL https://get.k3s.io | \
-    K3S_URL="https://{{ hostvars[groups['k8s_init'][0]]['ts_ip'] }}:6443" \
-    K3S_TOKEN="{{ hostvars[groups['k8s_init'][0]]['k3s_token_raw']['content'] | b64decode | trim }}" \
-    sh -s - agent \
-    --node-ip={{ ts_ip }} \
-    --node-external-ip={{ ts_ip }} \
-    --flannel-iface=tailscale0 \
-    {% for label in k8s_node_labels | default([]) %}--node-label "{{ label }}" {% endfor %}
+    curl -sfL https://get.k3s.io | K3S_URL={{ cluster_url }} K3S_TOKEN={{ cluster_token }} sh -s - agent \
+      --node-ip "{{ ts_ip }}" \
+      --node-external-ip "{{ ts_ip }}" \
+      --flannel-iface "tailscale0" \
+      --kubelet-arg='eviction-hard=memory.available<10%,imagefs.available<10%,nodefs.available<10%' \
+      --kubelet-arg='system-reserved=cpu={{ (ansible_facts['processor_vcpus'] * 1000 * 0.05) | int }}m,memory={{ [ (ansible_facts['memtotal_mb'] * 0.05) | int, 400 ] | max }}Mi' \
+      --kubelet-arg='kube-reserved=cpu={{ (ansible_facts['processor_vcpus'] * 1000 * 0.05) | int }}m,memory={{ [ (ansible_facts['memtotal_mb'] * 0.05) | int, 200 ] | max }}Mi' \
+      {% for label in k8s_node_labels | default([]) %}--node-label "{{ label }}" {% endfor %}
   args:
     creates: /etc/systemd/system/k3s-agent.service
 
@@ -16,3 +20,4 @@
     name: k3s-agent
     state: started
     enabled: yes
+    daemon_reload: yes

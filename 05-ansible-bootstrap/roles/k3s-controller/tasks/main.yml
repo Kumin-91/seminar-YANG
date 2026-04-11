@@ -1,31 +1,46 @@
 - name: "1. Cluster Seed Node 설치 및 초기화"
   ansible.builtin.shell: |
     curl -sfL https://get.k3s.io | sh -s - server \
-    --cluster-init \
-    --node-ip={{ ts_ip }} \
-    --node-external-ip={{ ts_ip }} \
-    --flannel-iface=tailscale0 \
-    --write-kubeconfig-mode=644 \
-    {% for label in k8s_node_labels | default([]) %}--node-label "{{ label }}" {% endfor %}
+      --cluster-init \
+      --node-ip "{{ ts_ip }}" \
+      --node-external-ip "{{ ts_ip }}" \
+      --flannel-iface "tailscale0" \
+      --tls-san "{{ ts_ip }}" \
+      --advertise-address "{{ ts_ip }}" \
+      --write-kubeconfig-mode=644 \
+      --kubelet-arg='eviction-hard=memory.available<10%,imagefs.available<10%,nodefs.available<10%' \
+      --kubelet-arg='system-reserved=cpu={{ (ansible_facts['processor_vcpus'] * 1000 * 0.05) | int }}m,memory={{ [ (ansible_facts['memtotal_mb'] * 0.05) | int, 400 ] | max }}Mi' \
+      --kubelet-arg='kube-reserved=cpu={{ (ansible_facts['processor_vcpus'] * 1000 * 0.05) | int }}m,memory={{ [ (ansible_facts['memtotal_mb'] * 0.05) | int, 200 ] | max }}Mi' \
+      {% for label in k8s_node_labels | default([]) %}--node-label "{{ label }}" {% endfor %}
   args:
-    creates: /etc/rancher/k3s/k3s.yaml
+    creates: /etc/systemd/system/k3s.service
   when: "'k8s_init' in group_names"
 
-- name: "2. Cluster Join Token 추출"
+- name: "2. Seed 노드로부터 Join 토큰 추출"
   ansible.builtin.slurp:
     src: "/var/lib/rancher/k3s/server/node-token"
   register: k3s_token_raw
-  when: "'k8s_init' in group_names"
+  delegate_to: "{{ groups['k8s_init'][0] }}"
+  run_once: true
 
 - name: "3. 추가 Control Plane 노드 합류"
+  throttle: 1
+  vars:
+    master_node: "{{ groups['k8s_init'][0] }}"
+    cluster_url: "https://{{ hostvars[master_node]['ts_ip'] | trim }}:6443"
+    cluster_token: "{{ hostvars[master_node]['k3s_token_raw']['content'] | b64decode | trim }}"
   ansible.builtin.shell: |
-    curl -sfL https://get.k3s.io | K3S_TOKEN={{ hostvars[groups['k8s_init'][0]]['k3s_token_raw']['content'] | b64decode | trim }} sh -s - server \
-    --server https://{{ hostvars[groups['k8s_init'][0]]['ts_ip'] }}:6443 \
-    --node-ip={{ ts_ip }} \
-    --node-external-ip={{ ts_ip }} \
-    --flannel-iface=tailscale0 \
-    --write-kubeconfig-mode=644 \
-    {% for label in k8s_node_labels | default([]) %}--node-label "{{ label }}" {% endfor %}
+    curl -sfL https://get.k3s.io | K3S_TOKEN={{ cluster_token }} sh -s - server \
+      --server {{ cluster_url }} \
+      --node-ip "{{ ts_ip }}" \
+      --node-external-ip "{{ ts_ip }}" \
+      --flannel-iface "tailscale0" \
+      --tls-san "{{ ts_ip }}" \
+      --write-kubeconfig-mode=644 \
+      --kubelet-arg='eviction-hard=memory.available<10%,imagefs.available<10%,nodefs.available<10%' \
+      --kubelet-arg='system-reserved=cpu={{ (ansible_facts['processor_vcpus'] * 1000 * 0.05) | int }}m,memory={{ [ (ansible_facts['memtotal_mb'] * 0.05) | int, 400 ] | max }}Mi' \
+      --kubelet-arg='kube-reserved=cpu={{ (ansible_facts['processor_vcpus'] * 1000 * 0.05) | int }}m,memory={{ [ (ansible_facts['memtotal_mb'] * 0.05) | int, 200 ] | max }}Mi' \
+      {% for label in k8s_node_labels | default([]) %}--node-label "{{ label }}" {% endfor %}
   args:
-    creates: /etc/rancher/k3s/k3s.yaml
+    creates: /etc/systemd/system/k3s.service
   when: "'k8s_join' in group_names"

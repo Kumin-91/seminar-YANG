@@ -43,26 +43,6 @@ YANG 모델링을 통한 추상화부터 데이터 검증, 스토리지 통합, 
 
 * **End-to-End MDI Pipeline:** YANG 설계도가 Terraform, Shell Script, Ansible을 거쳐 실제 인프라로 자동 전환되는 완전한 인프라 파이프라인을 시연했습니다.
 
-## 🗿 Next Milestone
-
-* **Hybrid Backbone Optimization**
-
-    * 하이브리드 클라우드의 혈관인 Tailscale 네트워크의 레이턴시와 스루풋을 정밀 모니터링합니다.
-
-    * 지리적 경계를 넘나드는 통신 효율을 극대화하기 위한 커널 파라미터 튜닝 및 최적화 경로 설정을 진행합니다.
-
-* **Feedback-Driven Schema Evolution**
-
-    * 구축 과정에서 마주한 Reality Plane의 변수들을 다시 YANG 모델에 반영합니다.
-
-    * 더 복잡한 제약 조건과 시나리오를 수용할 수 있도록 스키마를 고도화하여 모델의 표현력을 확장합니다.
-
-* **From RAW to Hardened (K3s Tuning)**
-
-    * 현재의 RAW한 클러스터 상태를 넘어, 자원 할당 최적화 및 보안 하드닝을 통해 운영 안정성을 확보합니다.
-
-    * 이질적인 아키텍처 (ARM/x86) 간의 워크로드 스케줄링 정책을 정교화합니다.
-
 ## 📑 How to Use This Repository
 
 ```plain text
