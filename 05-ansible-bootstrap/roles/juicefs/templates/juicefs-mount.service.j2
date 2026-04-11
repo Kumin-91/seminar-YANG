@@ -10,8 +10,6 @@ LimitNOFILE=65536
 OOMScoreAdjust=-500
 
 # 환경 변수 설정
-Environment="ACCESS_KEY={{ minio_root_user }}"
-Environment="SECRET_KEY={{ minio_root_password }}"
 Environment="REDIS_URL=redis://:{{ redis_password }}@{{ storage_info.redis_url }}/0"
 
 # 마운트 포인트가 존재하지 않으면 자동으로 생성하도록 설정합니다.

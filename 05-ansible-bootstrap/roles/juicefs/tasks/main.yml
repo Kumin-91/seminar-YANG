@@ -1,14 +1,13 @@
 - name: "1. JuiceFS 패키지 관리 및 마운트 준비"
   block:
-    - name: "최신 JuiceFS 설치 및 업데이트"
+    - name: "1-1. 최신 JuiceFS 설치 및 업데이트"
       ansible.builtin.shell: |
         curl -sSL https://d.juicefs.com/install | sh -s /usr/local/bin
-      args:
-        creates: /usr/local/bin/juicefs
+      changed_when: false
       retries: 5
       delay: 10
 
-    - name: "마운트 디렉토리 생성"
+    - name: "1-2.마운트 디렉토리 생성"
       ansible.builtin.file:
         path: "{{ storage_info.mount_point }}"
         state: directory
@@ -42,14 +41,14 @@
 
 - name: "4. JuiceFS 마운트 서비스 배포 및 활성화"
   block:
-    - name: "마운트 서비스 템플릿 배포"
+    - name: "4-1. 마운트 서비스 템플릿 배포"
       ansible.builtin.template:
         src: juicefs-mount.service.j2
         dest: /etc/systemd/system/juicefs-mount.service
         mode: '0644'
       register: jfs_service_template
 
-    - name: "서비스 설정 즉시 반영"
+    - name: "4-2. 서비스 설정 즉시 반영"
       ansible.builtin.systemd:
         name: juicefs-mount
         state: "{{ 'restarted' if jfs_service_template.changed or fuse_config.changed else 'started' }}"

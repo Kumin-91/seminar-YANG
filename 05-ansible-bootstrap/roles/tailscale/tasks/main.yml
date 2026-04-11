@@ -6,26 +6,35 @@
   retries: 5
   delay: 10
 
-- name: "2. Tailnet 조인 여부 확인"
+- name: "2. Tailscale 데몬 실행 확인"
+  ansible.builtin.systemd:
+    name: tailscaled
+    state: started
+    enabled: yes
+
+- name: "3. Tailnet 조인 여부 확인"
   ansible.builtin.command: tailscale status --json
   register: tailscale_status
   failed_when: false
   changed_when: false
 
-- name: "3. Tailnet 인증 및 연결 설정"
+- name: "4. Tailnet 인증 및 연결 설정"
   ansible.builtin.command: >
     tailscale up 
-      --authkey={{ tailscale_auth_key }} 
+      --auth-key={{ tailscale_auth_key }} 
       --hostname={{ inventory_hostname }} 
       --accept-routes=false 
       --accept-dns=false 
       --reset
   register: tailscale_up_result
   no_log: true
+  when: >
+    tailscale_status.rc != 0 or 
+    (tailscale_status.stdout | from_json).BackendState != 'Running'
 
-- name: "4. Tailscale IP 할당 및 변수 주입"
+- name: "5. Tailscale IP 할당 및 변수 주입"
   block:
-    - name: "IPv4 주소 확인"
+    - name: "5-1. IPv4 주소 확인"
       ansible.builtin.command: tailscale ip -4
       register: tailscale_ip
       changed_when: false
@@ -33,15 +42,15 @@
       retries: 5
       delay: 2
 
-    - name: "Fact 변수 (ts_ip) 등록"
+    - name: "5-2. Fact 변수 (ts_ip) 등록"
       ansible.builtin.set_fact:
         ts_ip: "{{ tailscale_ip.stdout | trim }}"
         cacheable: yes
   when: ts_ip is not defined
 
-- name: "5. NIC Offload 및 커널 튜닝"
+- name: "6. NIC Offload 및 커널 튜닝"
   block:
-    - name: "NIC 튜닝 서비스 생성"
+    - name: "6-1. NIC 튜닝 서비스 생성"
       ansible.builtin.copy:
         dest: /etc/systemd/system/nic-offload-tuning.service
         mode: '0644'
@@ -51,13 +60,13 @@
           After=network-online.target
           [Service]
           Type=oneshot
-          ExecStart=-/sbin/ethtool -K {{ ansible_facts['default_ipv4']['interface'] }} rx-udp-gro-forwarding on rx-gro-list off
+          ExecStart=-/sbin/ethtool -K {{ ansible_facts['default_ipv4']['interface'] | default('eth0') }} rx-udp-gro-forwarding on rx-gro-list off
           RemainAfterExit=yes
           [Install]
           WantedBy=multi-user.target
       register: nic_tuning
 
-    - name: "튜닝 즉시 반영"
+    - name: "6-2. 튜닝 즉시 반영"
       ansible.builtin.systemd:
         name: nic-offload-tuning
         state: restarted
@@ -65,7 +74,12 @@
         daemon_reload: yes
       when: nic_tuning.changed
 
-    - name: "커널 파라미터 튜닝 (BBR & UDP)"
+    - name: "6-3. BBR 커널 모듈 적재 확인"
+      community.general.modprobe:
+        name: tcp_bbr
+        state: present
+
+    - name: "6-4. 커널 파라미터 튜닝 (BBR & UDP)"
       ansible.builtin.sysctl:
         name: "{{ item.key }}"
         value: "{{ item.value }}"
@@ -84,15 +98,15 @@
         # 3. IP 포워딩
         - { key: 'net.ipv4.ip_forward', value: '1' }
 
-- name: "6. Tailscale 데몬 리소스 우선순위 할당"
+- name: "7. Tailscale 데몬 리소스 우선순위 할당"
   block:
-    - name: "Systemd Override 디렉토리 생성"
+    - name: "7-1. Systemd Override 디렉토리 생성"
       ansible.builtin.file:
         path: /etc/systemd/system/tailscaled.service.d
         state: directory
         mode: '0755'
         
-    - name: "Systemd Override 설정"
+    - name: "7-2. Systemd Override 설정"
       ansible.builtin.copy:
         dest: /etc/systemd/system/tailscaled.service.d/priority.conf
         content: |
@@ -101,7 +115,7 @@
           Nice=-5
       register: ts_priority
 
-    - name: "데몬 즉시 재시작"
+    - name: "7-3. Tailscale 데몬 즉시 재시작"
       ansible.builtin.systemd:
         name: tailscaled
         state: restarted

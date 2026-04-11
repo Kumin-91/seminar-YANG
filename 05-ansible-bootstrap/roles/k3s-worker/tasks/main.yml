@@ -1,23 +1,25 @@
-- name: "1. K3s Worker 설치 및 클러스터 합류"
-  vars:
-    master_node: "{{ groups['k8s_init'][0] }}"
-    cluster_url: "https://{{ hostvars[master_node]['ts_ip'] | trim }}:6443"
-    cluster_token: "{{ hostvars[master_node]['k3s_token_raw']['content'] | b64decode | trim }}"
+- name: "1-1. K3s 설정 디렉토리 준비 (Worker 노드)"
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
+
+- name: "1-2. K3s Worker Node 설정 파일 배포"
+  ansible.builtin.template:
+    src: k3s-worker.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: '0600'
+  register: k3s_worker_template
+
+- name: "1-3. Cluster Worker Node 설치"
   ansible.builtin.shell: |
-    curl -sfL https://get.k3s.io | K3S_URL={{ cluster_url }} K3S_TOKEN={{ cluster_token }} sh -s - agent \
-      --node-ip "{{ ts_ip }}" \
-      --node-external-ip "{{ ts_ip }}" \
-      --flannel-iface "tailscale0" \
-      --kubelet-arg='eviction-hard=memory.available<10%,imagefs.available<10%,nodefs.available<10%' \
-      --kubelet-arg='system-reserved=cpu={{ (ansible_facts['processor_vcpus'] * 1000 * 0.05) | int }}m,memory={{ [ (ansible_facts['memtotal_mb'] * 0.05) | int, 400 ] | max }}Mi' \
-      --kubelet-arg='kube-reserved=cpu={{ (ansible_facts['processor_vcpus'] * 1000 * 0.05) | int }}m,memory={{ [ (ansible_facts['memtotal_mb'] * 0.05) | int, 200 ] | max }}Mi' \
-      {% for label in k8s_node_labels | default([]) %}--node-label "{{ label }}" {% endfor %}
+    curl -sfL https://get.k3s.io | sh -s - agent
   args:
     creates: /etc/systemd/system/k3s-agent.service
 
-- name: "2. K3s 에이전트 서비스 활성화 및 시작"
+- name: "1-4. 설정 변경 시 K3s Agent 서비스 재시작"
   ansible.builtin.systemd:
     name: k3s-agent
-    state: started
-    enabled: yes
+    state: restarted
     daemon_reload: yes
+  when: k3s_worker_template.changed
