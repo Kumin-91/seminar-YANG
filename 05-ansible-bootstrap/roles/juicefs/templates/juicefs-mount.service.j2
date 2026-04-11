@@ -1,23 +1,25 @@
 [Unit]
 Description=JuiceFS Mount Service (MDI Managed)
-After=network-online.target
-Wants=network-online.target
+After=network-online.target tailscaled.service
+Wants=network-online.target tailscaled.service
 
 [Service]
 Type=simple
 
+LimitNOFILE=65536
+OOMScoreAdjust=-500
+
 # 환경 변수 설정
-Environment="ACCESS_KEY={{ minio_root_user }}"
-Environment="SECRET_KEY={{ minio_root_password }}"
+Environment="REDIS_URL=redis://:{{ redis_password }}@{{ storage_info.redis_url }}/0"
 
 # 마운트 포인트가 존재하지 않으면 자동으로 생성하도록 설정합니다.
 ExecStartPre=/usr/bin/mkdir -p {{ storage_info.mount_point }}
 
 # 메타데이터 주소만으로도 MinIO 백엔드를 자동으로 찾아 마운트합니다.
-ExecStart={{ juicefs_bin_path }} mount \
-    --cache-size {{ storage_info.cache_size }} \
+ExecStart=/usr/local/bin/juicefs mount \
+    --cache-size {{ (storage_info.cache_size | int) * 1024 }} \
     -o allow_other \
-    "redis://:{{ redis_password }}@{{ storage_info.redis_url }}/0" \
+    "$REDIS_URL" \
     "{{ storage_info.mount_point }}"
 
 ExecStop=/usr/bin/umount -l {{ storage_info.mount_point }}

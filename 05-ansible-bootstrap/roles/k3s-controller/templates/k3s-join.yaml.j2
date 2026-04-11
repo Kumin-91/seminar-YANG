@@ -1,0 +1,21 @@
+server: "https://{{ hostvars[groups['k8s_init'][0]]['ts_ip'] | trim }}:6443"
+token: "{{ hostvars[groups['k8s_init'][0]]['k3s_token_raw']['content'] | b64decode | trim }}"
+
+write-kubeconfig-mode: "644"
+node-ip: "{{ ts_ip }}"
+node-external-ip: "{{ ts_ip }}"
+flannel-iface: "tailscale0"
+tls-san:
+  - "{{ ts_ip }}"
+
+# Kubelet
+kubelet-arg:
+  - "eviction-hard=memory.available<10%,imagefs.available<10%,nodefs.available<10%"
+  - "system-reserved=cpu={{ (ansible_facts.processor_vcpus * 1000 * 0.05) | int }}m,memory={{ [ (ansible_facts.memtotal_mb * 0.05) | int, 400 ] | max }}Mi"
+  - "kube-reserved=cpu={{ (ansible_facts.processor_vcpus * 1000 * 0.05) | int }}m,memory={{ [ (ansible_facts.memtotal_mb * 0.05) | int, 200 ] | max }}Mi"
+
+# 동적 라벨
+node-label:
+{% for label in k8s_node_labels | default([]) %}
+  - "{{ label }}"
+{% endfor %}

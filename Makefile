@@ -31,13 +31,9 @@ help:
 all:
 	@echo "모든 과정을 실행합니다..."
 	$(MAKE) keygen
-	@sleep 5
 	$(MAKE) lint
-	@sleep 5
 	$(MAKE) provision
-	@sleep 5
 	$(MAKE) bootstrap
-	@sleep 5
 	@echo "모든 과정이 완료되었습니다."
 
 # SSH 키 페어 생성 (이미 존재하면 건너뜀)
@@ -81,6 +77,7 @@ provision:
 # Ansible 부트스트랩 실행
 bootstrap:
 	@echo "[Phase 5] Ansible 부트스트랩을 실행합니다..."
+	@chmod +x $(RESOLVER)
 	@ANSIBLE_CONFIG=$(ANSIBLE_CFG) $(ANSIBLE) -i $(RESOLVER) $(SITE_YAML)
 
 # AWS 인프라 제거

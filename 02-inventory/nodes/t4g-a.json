@@ -2,7 +2,7 @@
   "hybrid-cloud:cluster": {
     "node": [
       {
-        "name": "t4g-b",
+        "name": "t4g-a",
         "k8s-role-assignment": {
             "node-role": "worker",
             "bootstrap-role": "join"

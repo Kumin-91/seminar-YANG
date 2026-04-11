@@ -30,7 +30,7 @@ module common-types {
     // After - Kubernetes 구조에 맞게 일반화
     typedef k8s-node-role {
         type enumeration {
-            enum control_plane;
+            enum control-plane;
             enum worker;
         }
     }

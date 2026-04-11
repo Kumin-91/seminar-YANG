@@ -1,36 +1,74 @@
-- name: "1. Cluster Seed Node 설치 및 초기화"
-  ansible.builtin.shell: |
-    curl -sfL https://get.k3s.io | sh -s - server \
-    --cluster-init \
-    --node-ip={{ ts_ip }} \
-    --node-external-ip={{ ts_ip }} \
-    --flannel-iface=tailscale0 \
-    --write-kubeconfig-mode=644
-  args:
-    creates: /etc/rancher/k3s/k3s.yaml
+- name: "1-1. K3s 설정 디렉토리 준비 (Seed 노드)"
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
   when: "'k8s_init' in group_names"
 
-- name: "2. Cluster Join Token 추출 및 공유"
+- name: "1-2. K3s Seed Node 설정 파일 배포"
+  ansible.builtin.template:
+    src: k3s-init.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: '0600'
+  when: "'k8s_init' in group_names"
+  register: k3s_init_template
+
+- name: "1-3. Cluster Seed Node 설치"
+  ansible.builtin.shell: |
+    curl -sfL https://get.k3s.io | sh -s - server --cluster-init
+  args:
+    creates: /usr/local/bin/k3s
+  when: "'k8s_init' in group_names"
+
+- name: "1-4. 설정 변경 시 K3s 서비스 재시작"
+  ansible.builtin.systemd:
+    name: k3s
+    state: restarted
+    daemon_reload: yes
+  when: "'k8s_init' in group_names and k3s_init_template.changed"
+
+- name: "1-5. Seed 노드의 Join 토큰 파일 생성 대기"
+  ansible.builtin.wait_for:
+    path: /var/lib/rancher/k3s/server/node-token
+    state: present
+    timeout: 30
+  delegate_to: "{{ groups['k8s_init'][0] }}"
+  run_once: true
+
+- name: "2. Seed 노드로부터 Join 토큰 추출"
   ansible.builtin.slurp:
     src: "/var/lib/rancher/k3s/server/node-token"
   register: k3s_token_raw
-  when: "'k8s_init' in group_names"
-
-- name: "3. 토큰을 모든 노드에게 전파"
-  ansible.builtin.set_fact:
-    cluster_token: "{{ hostvars[groups['k8s_init'][0]]['k3s_token_raw']['content'] | b64decode | trim }}"
+  delegate_to: "{{ groups['k8s_init'][0] }}"
   run_once: true
 
-- name: "4. 추가 Control Plane 노드 합류"
+- name: "3-1. K3s 설정 디렉토리 준비 (Join 노드)"
+  ansible.builtin.file:
+    path: /etc/rancher/k3s
+    state: directory
+    mode: '0755'
+  when: "'k8s_join' in group_names"
+
+- name: "3-2. 추가 Control Plane 설정 파일 배포"
+  throttle: 1
+  ansible.builtin.template:
+    src: k3s-join.yaml.j2
+    dest: /etc/rancher/k3s/config.yaml
+    mode: '0600'
+  when: "'k8s_join' in group_names"
+  register: k3s_join_template
+
+- name: "3-3. 추가 Control Plane 노드 합류 설치 실행"
+  throttle: 1
   ansible.builtin.shell: |
-    curl -sfL https://get.k3s.io | K3S_TOKEN={{ cluster_token }} sh -s - server \
-    --server https://{{ hostvars[groups['k8s_init'][0]]['ts_ip'] }}:6443 \
-    --node-ip={{ ts_ip }} \
-    --node-external-ip={{ ts_ip }} \
-    --flannel-iface=tailscale0 \
-    --write-kubeconfig-mode=644
+    curl -sfL https://get.k3s.io | sh -s - server
   args:
-    creates: /etc/rancher/k3s/k3s.yaml
-  when: 
-    - "'k8s_join' in group_names"
-    - "'control_plane' in group_names"
+    creates: /usr/local/bin/k3s
+  when: "'k8s_join' in group_names"
+
+- name: "3-4. 설정 변경 시 K3s 서비스 재시작"
+  ansible.builtin.systemd:
+    name: k3s
+    state: restarted
+    daemon_reload: yes
+  when: "'k8s_join' in group_names and k3s_join_template.changed"

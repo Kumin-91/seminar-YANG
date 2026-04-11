@@ -4,7 +4,7 @@
       {
         "name": "t3-a",
         "k8s-role-assignment": {
-            "node-role": "control_plane",
+            "node-role": "control-plane",
             "bootstrap-role": "join"
           },
         "compute": {
